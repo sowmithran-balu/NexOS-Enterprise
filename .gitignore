@@ -1,0 +1,43 @@
+# Java / Maven
+**/target/
+**/*.class
+**/*.jar
+**/*.war
+**/*.ear
+*.class
+*.jar
+
+# Node.js
+**/node_modules/
+**/dist/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs and databases
+*.log
+sql_errorlog*
+*.db
+*.sqlite
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.classpath
+.project
+.settings/
+.nb-gradle/
+
+# OS metadata
+.DS_Store
+Thumbs.db

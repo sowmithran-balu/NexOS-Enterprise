@@ -1,0 +1,2575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexOS Settings - Business management, unified</title>
+  
+  <!-- Fonts & Material Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* Brand Tokens */
+      --navy: #10163A;
+      --navy2: #1B2456;
+      --navy3: #232C63;
+      --accent: #12A594;
+      --accent-dark: #0B7A6E;
+      --accent-tint: #E4F7F4;
+      --warm: #E2662F;
+      --credit: #2E9E5B;
+      --bg: #F3F5F9;
+      --surface: #FFFFFF;
+      --border: #E1E5EC;
+      --border-width: 1px;
+      --text: #161B33;
+      --text-2: #5B6178;
+      --text-muted: #9298AC;
+      --radius: 8px;
+      --font-brand: 'Manrope', sans-serif;
+      --font-body: 'Inter', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* Top Identity Bar */
+    .app-header {
+      background-color: var(--navy);
+      color: #FFFFFF;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-badge {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #FFFFFF;
+      font-family: var(--font-brand);
+      font-weight: 800;
+      font-size: 18px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      letter-spacing: -0.5px;
+    }
+    .brand-name {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: 16px;
+      line-height: 1.2;
+    }
+    .brand-tagline {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .nav-btn:hover {
+      background: rgba(255,255,255,0.15);
+    }
+
+    /* Ribbon menu banner */
+    .ribbon-bar {
+      background-color: var(--navy2);
+      color: #FFFFFF;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      flex-shrink: 0;
+      justify-content: space-between;
+    }
+    .ribbon-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #FFFFFF;
+      text-decoration: none;
+    }
+
+    /* Main settings workspace */
+    .settings-workspace {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Left Sidebar */
+    .settings-sidebar {
+      width: 320px;
+      background-color: var(--surface);
+      border-right: var(--border-width, 1px) solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+      transition: width 0.3s ease;
+    }
+    .sidebar-search {
+      padding: 16px;
+      border-bottom: var(--border-width, 1px) solid var(--border);
+    }
+    .search-wrapper {
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      background-color: var(--bg);
+      border: var(--border-width, 1px) solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 12px 10px 38px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-tint);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-2);
+      font-size: 18px;
+    }
+
+    /* Scrollable categories menu */
+    .categories-menu {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+    .category-group {
+      border-bottom: 1px solid rgba(0,0,0,0.03);
+    }
+    .category-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+    .category-header:hover {
+      background-color: var(--bg);
+    }
+    .category-icon {
+      color: var(--text-2);
+      margin-right: 12px;
+      font-size: 20px;
+    }
+    .category-label {
+      font-size: 13px;
+      font-weight: 600;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .category-chevron {
+      color: var(--text-muted);
+      font-size: 18px;
+      transition: transform 0.2s;
+    }
+    .category-group.expanded .category-chevron {
+      transform: rotate(90deg);
+    }
+
+    /* Sub-items nested list */
+    .category-subitems {
+      display: none;
+      background-color: rgba(243, 245, 249, 0.5);
+      padding: 4px 0;
+    }
+    .category-group.expanded .category-subitems {
+      display: block;
+    }
+    .subitem-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px 8px 48px;
+      font-size: 12px;
+      color: var(--text-2);
+      text-decoration: none;
+      transition: color 0.2s, background-color 0.2s;
+    }
+    .subitem-link:hover {
+      background-color: var(--accent-tint);
+      color: var(--accent-dark);
+    }
+    .subitem-link.active {
+      background-color: var(--accent-tint);
+      color: var(--accent);
+      font-weight: 600;
+      border-right: calc(var(--border-width, 1px) * 3) solid var(--accent);
+    }
+
+    /* Status badges directly in sidebar list */
+    .badge-status {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-left: 6px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .badge-status.active {
+      background-color: #E4F7F4;
+      color: var(--credit);
+    }
+    .badge-status.inactive {
+      background-color: #FEEBE2;
+      color: var(--warm);
+    }
+    .badge-status.setup {
+      background-color: #FFF9E6;
+      color: #D97706;
+    }
+    .badge-status.update {
+      background-color: #E6F0FA;
+      color: #2563EB;
+    }
+
+    /* Right Details Content Panel */
+    .settings-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Breadcrumbs header */
+    .content-header {
+      background-color: var(--surface);
+      border-bottom: var(--border-width, 1px) solid var(--border);
+      padding: 16px 24px;
+      flex-shrink: 0;
+    }
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-2);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .bc-separator {
+      color: var(--text-muted);
+    }
+    .bc-active {
+      color: var(--accent);
+    }
+    .page-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .page-title {
+      font-family: var(--font-brand);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--navy);
+    }
+    .page-description {
+      font-size: 12px;
+      color: var(--text-2);
+      margin-top: 4px;
+    }
+
+    /* Content body views scroll area */
+    .content-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .settings-card {
+      background-color: var(--surface);
+      border: var(--border-width, 1px) solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      max-width: 800px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    /* Form Styles */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .form-grid.full-width {
+      grid-template-columns: 1fr;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group.span-2 {
+      grid-column: span 2;
+    }
+    .form-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+    .form-input {
+      background-color: var(--bg);
+      border: var(--border-width, 1px) solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      background-color: var(--surface);
+    }
+    .form-textarea {
+      min-height: 80px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .toggle-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    /* Toggle switch styles */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border);
+      transition: .3s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+
+    /* Theme Thumbnail selector */
+    .theme-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .theme-thumb {
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .thumb-preview {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 6px;
+      border: var(--border-width, 1px) solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .theme-thumb:hover .thumb-preview {
+      border-color: var(--accent);
+    }
+    .theme-thumb.active .thumb-preview {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-tint);
+    }
+    .thumb-header {
+      height: 18%;
+      width: 100%;
+    }
+    .thumb-body {
+      flex: 1;
+      display: flex;
+    }
+    .thumb-sidebar {
+      width: 25%;
+      height: 100%;
+    }
+    .thumb-main {
+      flex: 1;
+      height: 100%;
+    }
+    .thumb-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+    }
+
+    .thumb-preview.light { background-color: #F3F5F9; }
+    .thumb-preview.light .thumb-header { background-color: #10163A; }
+    .thumb-preview.light .thumb-sidebar { background-color: #FFFFFF; border-right: 1px solid #E1E5EC; }
+    .thumb-preview.light .thumb-main { background-color: #FFFFFF; }
+
+    .thumb-preview.dark { background-color: #0B1220; }
+    .thumb-preview.dark .thumb-header { background-color: #10163A; }
+    .thumb-preview.dark .thumb-sidebar { background-color: #172033; border-right: 1px solid #273449; }
+    .thumb-preview.dark .thumb-main { background-color: #172033; }
+
+    .thumb-preview.system { background-color: #F3F5F9; }
+    .thumb-preview.system .thumb-header { background-color: #10163A; }
+    .thumb-preview.system .thumb-sidebar { background-color: #FFFFFF; border-right: 1px solid #E1E5EC; }
+    .thumb-preview.system .thumb-main { background: linear-gradient(135deg, #FFFFFF 50%, #172033 50%); }
+
+    .thumb-preview.hc-light { background-color: #FFFFFF; border-color: #000000; }
+    .thumb-preview.hc-light .thumb-header { background-color: #000000; }
+    .thumb-preview.hc-light .thumb-sidebar { background-color: #FFFFFF; border-right: 2px solid #000000; }
+    .thumb-preview.hc-light .thumb-main { background-color: #FFFFFF; }
+
+    .thumb-preview.hc-dark { background-color: #000000; border-color: #FFFFFF; }
+    .thumb-preview.hc-dark .thumb-header { background-color: #FFFFFF; }
+    .thumb-preview.hc-dark .thumb-sidebar { background-color: #000000; border-right: 2px solid #FFFFFF; }
+    .thumb-preview.hc-dark .thumb-main { background-color: #000000; }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      border-top: var(--border-width, 1px) solid var(--border);
+      padding-top: 20px;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-secondary {
+      background-color: var(--bg);
+      color: var(--text-2);
+      border: var(--border-width, 1px) solid var(--border);
+    }
+    .btn-secondary:hover {
+      background-color: var(--border);
+    }
+    .btn-primary {
+      background-color: var(--accent);
+      color: #FFFFFF;
+    }
+    .btn-primary:hover {
+      background-color: var(--accent-dark);
+    }
+
+    /* Modal dialog overrides & custom tables */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+    .matrix-table th, .matrix-table td {
+      border: var(--border-width, 1px) solid var(--border);
+      padding: 10px;
+      text-align: left;
+    }
+    .matrix-table th {
+      background-color: var(--bg);
+      font-weight: 600;
+    }
+    .matrix-checkbox {
+      cursor: pointer;
+    }
+
+    /* Theme customizer color presets */
+    .color-presets {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .color-preset {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .color-preset.active {
+      border-color: var(--navy);
+    }
+    .preset-icon {
+      color: #FFFFFF;
+      font-size: 16px;
+      display: none;
+    }
+    .color-preset.active .preset-icon {
+      display: block;
+    }
+
+    /* Backups log items */
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background-color: var(--bg);
+      font-size: 12px;
+    }
+
+    /* Toast style notifications */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1000;
+    }
+    .toast {
+      background-color: var(--navy);
+      color: #FFFFFF;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-left: 4px solid var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transform: translateY(20px);
+      opacity: 0;
+      animation: slideUp 0.3s forwards;
+    }
+    @keyframes slideUp {
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Responsive Sidebar overrides */
+    @media (max-width: 768px) {
+      .settings-sidebar {
+        width: 60px;
+      }
+      .sidebar-search {
+        display: none;
+      }
+      .category-label, .category-chevron, .badge-status {
+        display: none;
+      }
+      .category-header {
+        justify-content: center;
+        padding: 12px 0;
+      }
+      .category-icon {
+        margin-right: 0;
+      }
+      .category-subitems {
+        position: absolute;
+        left: 60px;
+        background-color: #FFFFFF;
+        box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid var(--border);
+        width: 200px;
+        z-index: 50;
+      }
+      .subitem-link {
+        padding: 10px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-badge">nX</div>
+      <div class="brand-info">
+        <h1 class="brand-name">NexOS Enterprise Settings</h1>
+        <span class="brand-tagline" id="settings-company-name">Apex Global Trading Ltd.</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="nav-btn" onclick="location.href = localStorage.getItem('last_erp_page') || 'nexos_enterprise.html';">
+        <span class="material-icons-round">dashboard</span> Back to ERP
+      </button>
+    </div>
+  </header>
+
+  <!-- Ribbon bar -->
+  <nav class="ribbon-bar">
+    <div class="ribbon-title">
+      <span class="material-icons-round" style="font-size: 16px; color: var(--accent);">settings</span>
+      <span>System Administrator Settings Console</span>
+    </div>
+    <div style="font-size: 11px; opacity: 0.8; font-weight: 500;">
+      Current active node: <span style="font-family:'JetBrains Mono'; font-weight: 600;">GATEWAY-US-EAST</span>
+    </div>
+  </nav>
+
+  <!-- Settings Workspace -->
+  <div class="settings-workspace">
+    
+    <!-- Left Sidebar -->
+    <aside class="settings-sidebar" id="settings-sidebar">
+      <div class="sidebar-search">
+        <div class="search-wrapper">
+          <input type="text" id="settings-search" class="search-input" placeholder="Filter settings..." oninput="filterSettings()">
+          <span class="material-icons-round search-icon">search</span>
+        </div>
+      </div>
+      
+      <div class="categories-menu" id="categories-menu">
+        <!-- Rendered dynamically from script -->
+      </div>
+    </aside>
+
+    <!-- Main Content Panel -->
+    <main class="settings-content">
+      <div class="content-header">
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span>Settings</span>
+          <span class="bc-separator">&gt;</span>
+          <span>General</span>
+          <span class="bc-separator">&gt;</span>
+          <span class="bc-active">Company Profile</span>
+        </div>
+        <div class="page-title-row">
+          <div>
+            <h2 class="page-title" id="page-title">Company Profile</h2>
+            <p class="page-description" id="page-description">Manage legal registration details, company logo, and addresses.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-body">
+        <div class="settings-card" id="settings-card">
+          <!-- Form dynamically rendered -->
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Script Logic -->
+  <script>
+    // System settings definitions for all 14 categories & 60+ sub-functions
+    const defaultSettingsSchema = {
+      // 1. GENERAL
+      'company_profile': {
+        title: 'Company Profile',
+        category: 'General / Organization',
+        description: 'Manage legal registration details, company logo, and addresses.',
+        fields: [
+          { name: 'legalName', label: 'Company Legal Name', type: 'text', value: 'Apex Global Trading Ltd.' },
+          { name: 'tradeName', label: 'Trade Name / Monogram', type: 'text', value: 'Apex Trading' },
+          { name: 'regNo', label: 'Corporate Registration Number', type: 'text', value: 'REG-9921-2026' },
+          { name: 'taxId', label: 'Tax / GSTIN Identifier', type: 'text', value: '36AAAAC1234A1Z1' },
+          { name: 'address', label: 'Headquarters Address', type: 'textarea', value: '123 Business Way, Suite 500, New York, NY' }
+        ]
+      },
+      'branches': {
+        title: 'Multi-Company & Branch Management',
+        category: 'General / Organization',
+        description: 'Configure and monitor subsidiary corporate legal entities and geographical branch warehouses.',
+        fields: [
+          { name: 'parentCo', label: 'Holding Company', type: 'text', value: 'Apex Group Holdings Inc.' },
+          { name: 'activeBranches', label: 'Active Branches Count', type: 'number', value: '4' },
+          { name: 'hqNode', label: 'Headquarters Branch Node', type: 'text', value: 'New York HQ' },
+          { name: 'consolidatedBooks', label: 'Consolidate Balance Sheets', type: 'toggle', value: true }
+        ]
+      },
+      'fiscal_year': {
+        title: 'Fiscal Year & Period Settings',
+        category: 'General / Organization',
+        description: 'Define fiscal closing dates, reporting periods, and transaction locking dates.',
+        fields: [
+          { name: 'currentFy', label: 'Current Fiscal Period', type: 'text', value: 'FY 2026-27' },
+          { name: 'startDate', label: 'Fiscal Start Date', type: 'date', value: '2026-04-01' },
+          { name: 'endDate', label: 'Fiscal End Date', type: 'date', value: '2027-03-31' },
+          { name: 'lockDate', label: 'Freeze Books Back-posting Date', type: 'date', value: '2026-06-30' }
+        ]
+      },
+      'locale': {
+        title: 'Locale & Formats',
+        category: 'General / Organization',
+        description: 'Set localization values including default languages, date layouts, and system timezones.',
+        fields: [
+          { name: 'lang', label: 'Primary GUI Language', type: 'select', options: ['English (US)', 'English (UK)', 'Spanish', 'German', 'Hindi'], value: 'English (US)' },
+          { name: 'dateFormat', label: 'Date Display String', type: 'select', options: ['YYYY-MM-DD', 'DD-MM-YYYY', 'MM/DD/YYYY'], value: 'YYYY-MM-DD' },
+          { name: 'tz', label: 'System Default Timezone', type: 'select', options: ['UTC', 'EST (UTC-5)', 'IST (UTC+5.5)', 'GMT (UTC+0)'], value: 'EST (UTC-5)' }
+        ]
+      },
+      'currency': {
+        title: 'Multi-Currency & Exchange Rates',
+        category: 'General / Organization',
+        description: 'Configure corporate base ledger currency and active foreign exchange feed integrations.',
+        fields: [
+          { 
+            name: 'baseCurrency', 
+            label: 'Base Ledger Currency', 
+            type: 'select', 
+            options: [
+              'USD - United States Dollar',
+              'EUR - Euro',
+              'INR - Indian Rupee',
+              'GBP - British Pound Sterling',
+              'JPY - Japanese Yen',
+              'CNY - Chinese Yuan',
+              'CHF - Swiss Franc'
+            ], 
+            value: 'USD - United States Dollar' 
+          },
+          { name: 'autoFx', label: 'Automatic Live exchange updates', type: 'toggle', value: true },
+          { name: 'secondaryCurrency', label: 'Reporting Currency', type: 'text', value: 'EUR (€)' }
+        ]
+      },
+      'cost_centers': {
+        title: 'Business Units / Cost Centers / Departments',
+        category: 'General / Organization',
+        description: 'Design departmental hierarchy nodes to map expenses and allocate corporate budgets.',
+        fields: [
+          { name: 'buCount', label: 'Business Unit Count', type: 'number', value: '6' },
+          { name: 'defaultCC', label: 'Default Allocation Center', type: 'text', value: 'Corporate Admin' },
+          { name: 'strictCC', label: 'Enforce Cost Center on all Expense Vouchers', type: 'toggle', value: false }
+        ]
+      },
+
+      // 2. MODULES
+      'module_matrix': {
+        title: 'Module Activation Matrix',
+        category: 'Modules & Licensing',
+        description: 'Enable or disable complete ERP system modules to clean navigation workflows.',
+        customRender: 'renderModuleMatrix'
+      },
+      'licensing': {
+        title: 'License Management',
+        category: 'Modules & Licensing',
+        description: 'View active seats, subscription validity, and serial activation keys.',
+        fields: [
+          { name: 'seats', label: 'Allocated Seats / Users', type: 'text', value: '25 / 50 seats active', disabled: true },
+          { name: 'expiry', label: 'Plan Expiry Date', type: 'text', value: '2028-12-31', disabled: true },
+          { name: 'licenseKey', label: 'Product Activation Key', type: 'text', value: 'XXXX-NXER-8841-9921', disabled: true }
+        ]
+      },
+      'feature_flags': {
+        title: 'Feature Flags & Beta Toggles',
+        category: 'Modules & Licensing',
+        description: 'Test cutting-edge experimental features, AI voice modules, and new chart engines.',
+        fields: [
+          { name: 'aiVoice', label: 'Enable Cognitive AI Voice Assistant (FAB)', type: 'toggle', value: true },
+          { name: 'darkTheme', label: 'Premium Dark-Mode Interface', type: 'toggle', value: false },
+          { name: 'glassmorphism', label: 'Glassmorphic ribbon headers', type: 'toggle', value: true }
+        ]
+      },
+      'subscription': {
+        title: 'Subscription/Plan Tier',
+        category: 'Modules & Licensing',
+        description: 'Verify and manage your service level agreements, limits, and plan details.',
+        fields: [
+          { name: 'tier', label: 'Active Plan Tier', type: 'text', value: 'Enterprise Edition Plan' },
+          { name: 'billingCycle', label: 'Billing Period', type: 'text', value: 'Annual Renewal (Active)', disabled: true }
+        ]
+      },
+
+      // 3. VERSION & SYSTEM UPDATES
+      'build_info': {
+        title: 'Application Version & Build Info',
+        category: 'Version & System Updates',
+        description: 'Review technical binary versions and compilation dates.',
+        fields: [
+          { name: 'version', label: 'Core Version', type: 'text', value: 'v2.5.12-Stable', disabled: true },
+          { name: 'build', label: 'Build Hash', type: 'text', value: 'b4a8e2_win64_node18', disabled: true },
+          { name: 'compiled', label: 'Build Date', type: 'text', value: '2026-07-10 14:02:11', disabled: true }
+        ]
+      },
+      'version_tracker': {
+        title: 'Module-wise Version Tracker',
+        category: 'Version & System Updates',
+        description: 'Track database micro-version mappings and microservice compatibility.',
+        fields: [
+          { name: 'ledgerVersion', label: 'Ledger Engine Module', type: 'text', value: 'v2.4.0', disabled: true },
+          { name: 'payrollVersion', label: 'Payroll Engine Module', type: 'text', value: 'v2.1.2', disabled: true },
+          { name: 'crmVersion', label: 'CRM Interface Node', type: 'text', value: 'v1.9.9', disabled: true }
+        ]
+      },
+      'update_scheduler': {
+        title: 'Update Scheduler',
+        category: 'Version & System Updates',
+        description: 'Schedule automated hotfix applications and routine engine restarts.',
+        fields: [
+          { name: 'autoUpdate', label: 'Automatically apply minor patches', type: 'toggle', value: true },
+          { name: 'hour', label: 'Maintenance Window Hour', type: 'select', options: ['00:00 (Midnight)', '02:00 AM', '04:00 AM'], value: '02:00 AM' }
+        ]
+      },
+      'changelog': {
+        title: 'Patch Notes & Changelog Viewer',
+        category: 'Version & System Updates',
+        description: 'Read notes regarding additions, security hotfixes, and API deprecations in recent patches.',
+        fields: [
+          { name: 'notes', label: 'Changelog Summary (v2.5.12)', type: 'textarea', value: '- Added dynamic settings schema-driven rendering.\n- Fixed speech synthesis InvalidStateError warnings.\n- Enabled full master additions in in-memory state.', disabled: true }
+        ]
+      },
+      'update_history': {
+        title: 'Rollback & Update History',
+        category: 'Version & System Updates',
+        description: 'Access previous system snapshots for rollback or patch audit verification.',
+        fields: [
+          { name: 'prevUpdate', label: 'Last Update Event', type: 'text', value: 'v2.5.11 applied on 2026-07-01', disabled: true },
+          { name: 'rollbackAllowed', label: 'Allow recovery rollbacks', type: 'toggle', value: false }
+        ]
+      },
+      'environment': {
+        title: 'Environment Selector',
+        category: 'Version & System Updates',
+        description: 'Designate system mode parameters (Dev, Staging, or Prod) to enforce protection flags.',
+        fields: [
+          { name: 'env', label: 'Deployment State', type: 'select', options: ['Production', 'Staging / QA Sandbox', 'Developer Environment'], value: 'Production' }
+        ]
+      },
+
+      // 4. USER MANAGEMENT & SECURITY
+      'user_accounts': {
+        title: 'User Accounts',
+        category: 'User Management & Security',
+        description: 'Activate, register, deactivate, and manage employee accounts and passwords.',
+        fields: [
+          { name: 'adminMail', label: 'Primary Super Administrator Email', type: 'text', value: 'admin@apexcorp.com' },
+          { name: 'newUserDefRole', label: 'Default Role for new registrations', type: 'select', options: ['Standard Clerk', 'Manager', 'Auditor', 'CRM agent'], value: 'Standard Clerk' },
+          { name: 'inviteRequired', label: 'Require admin invite for self-registration', type: 'toggle', value: true }
+        ]
+      },
+      'rbac_matrix': {
+        title: 'Role-Based Access Control (RBAC) Matrix',
+        category: 'User Management & Security',
+        description: 'Establish read/write permissions mapped across standard roles and custom user levels.',
+        customRender: 'renderRBACMatrix'
+      },
+      'permission_groups': {
+        title: 'Permission Groups & Custom Roles',
+        category: 'User Management & Security',
+        description: 'Declare custom role classes for specific departmental workflow combinations.',
+        fields: [
+          { name: 'allowCustomRoles', label: 'Support custom role subclasses', type: 'toggle', value: true },
+          { name: 'groupCount', label: 'Active custom groups registered', type: 'number', value: '3', disabled: true }
+        ]
+      },
+      'two_factor': {
+        title: 'Two-Factor Authentication (2FA)',
+        category: 'User Management & Security',
+        description: 'Enforce MFA policies using TOTP software codes or hardware credentials.',
+        fields: [
+          { name: 'enforce2fa', label: 'Mandate 2FA for all administrative accounts', type: 'toggle', value: true },
+          { name: 'totpIssuer', label: 'TOTP Monogram Issuer Header', type: 'text', value: 'NexOS-Apex' }
+        ]
+      },
+      'sso_config': {
+        title: 'SSO / SAML / OAuth Config',
+        category: 'User Management & Security',
+        description: 'Connect internal Active Directory nodes, Google Workspace SSO, or Microsoft Azure credentials.',
+        fields: [
+          { name: 'ssoEnabled', label: 'Enable SSO authentication login integrations', type: 'toggle', value: false },
+          { name: 'oauthClient', label: 'Client Client ID key token', type: 'text', value: 'oauth_apex_client_921.apps.googleusercontent.com' }
+        ]
+      },
+      'session_policies': {
+        title: 'Session & Password Policies',
+        category: 'User Management & Security',
+        description: 'Set automatic session logout expirations and password entropy guidelines.',
+        fields: [
+          { name: 'timeout', label: 'Auto-logout idle sessions (minutes)', type: 'number', value: '15' },
+          { name: 'expiryDays', label: 'Password expiration interval (days)', type: 'number', value: '90' },
+          { name: 'strictRegex', label: 'Require special symbols, numbers, and case parity', type: 'toggle', value: true }
+        ]
+      },
+      'ip_whitelisting': {
+        title: 'IP Whitelisting & Restrictions',
+        category: 'User Management & Security',
+        description: 'Define allowed CIDR blocks or corporate static network IP addresses.',
+        fields: [
+          { name: 'restrictIP', label: 'Enforce connection restrictions', type: 'toggle', value: false },
+          { name: 'whitelist', label: 'Allowed IP Ranges (Comma separated)', type: 'textarea', value: '192.168.1.0/24, 10.0.0.0/8' }
+        ]
+      },
+      'login_activity': {
+        title: 'Login Activity & Device Registry',
+        category: 'User Management & Security',
+        description: 'Audit logs of active user sessions, device specs, and source IP headers.',
+        fields: [
+          { name: 'activeSessions', label: 'Active Connected Sessions', type: 'text', value: '4 active sessions', disabled: true },
+          { name: 'alertNewDev', label: 'Send alerts on new unrecognized device login', type: 'toggle', value: true }
+        ]
+      },
+
+      // 5. FINANCE
+      'chart_of_accounts': {
+        title: 'Chart of Accounts Setup',
+        category: 'Finance & Accounting Config',
+        description: 'Maintain primary accounting structures, numbering templates, and ledger schemas.',
+        fields: [
+          { name: 'digits', label: 'Account Code digits format', type: 'select', options: ['5 Digits', '6 Digits', 'Alphanumeric'], value: '5 Digits' },
+          { name: 'enforceParent', label: 'Enforce parent category hierarchy validation', type: 'toggle', value: true }
+        ]
+      },
+      'tax_config': {
+        title: 'Tax Configuration',
+        category: 'Finance & Accounting Config',
+        description: 'Establish standard tax codes (GST, VAT, TDS, TCS) and HSN/SAC rate mapping lists.',
+        fields: [
+          { name: 'defaultGst', label: 'Default GST Levy Rate (%)', type: 'select', options: ['5%', '12%', '18%', '28%'], value: '18%' },
+          { name: 'tdsEnabled', label: 'Calculate TDS on invoice postings', type: 'toggle', value: true },
+          { name: 'hsnMandatory', label: 'Mandate HSN codes on inventory bills', type: 'toggle', value: true }
+        ]
+      },
+      'e_invoicing': {
+        title: 'E-Invoicing / E-Way Bill API',
+        category: 'Finance & Accounting Config',
+        description: 'Configure active API connections for direct statutory filings and digital signatures.',
+        fields: [
+          { name: 'apiUsername', label: 'Government Sandbox API Username', type: 'text', value: 'APEX_SANDBOX_BILL' },
+          { name: 'apiPassword', label: 'Government Portal Password', type: 'password', value: '********' },
+          { name: 'liveFilings', label: 'Submit invoices directly upon posting', type: 'toggle', value: false }
+        ]
+      },
+      'numbering_series': {
+        title: 'Numbering Series Templates',
+        category: 'Finance & Accounting Config',
+        description: 'Define specific auto-number prefix formats for purchase orders, sales bills, and vouchers.',
+        fields: [
+          { name: 'invoicePrefix', label: 'Sales Invoice Code Prefix', type: 'text', value: 'INV-2026-' },
+          { name: 'voucherPrefix', label: 'Journal Voucher Code Prefix', type: 'text', value: 'VCH-2026-' },
+          { name: 'poPrefix', label: 'Purchase Order Code Prefix', type: 'text', value: 'PO-2026-' }
+        ]
+      },
+      'payment_terms': {
+        title: 'Payment Terms & Credit Limits',
+        category: 'Finance & Accounting Config',
+        description: 'Set standard payment milestones and maximum client credit thresholds.',
+        fields: [
+          { name: 'defaultTerms', label: 'Default Payment terms', type: 'select', options: ['Net 15', 'Net 30', 'Net 60', 'Immediate'], value: 'Net 30' },
+          { name: 'maxCredit', label: 'Default Client Credit Limit ($)', type: 'number', value: '50000' },
+          { name: 'blockOvercredit', label: 'Block sales invoicing if credit limit is breached', type: 'toggle', value: true }
+        ]
+      },
+      'bank_master': {
+        title: 'Bank Account Master & Reconciliation',
+        category: 'Finance & Accounting Config',
+        description: 'Connect banking gateways, parse statement uploads, and configure reconciliation models.',
+        fields: [
+          { name: 'reconcileTolerance', label: 'Statement match tolerance window (Days)', type: 'number', value: '3' },
+          { name: 'bankFeedAuto', label: 'Enable live banking feed API synchronization', type: 'toggle', value: false }
+        ]
+      },
+      'costing_method': {
+        title: 'Inventory Costing Method',
+        category: 'Finance & Accounting Config',
+        description: 'Establish standard inventory ledger costing rules.',
+        fields: [
+          { name: 'costing', label: 'Valuation Costing model', type: 'select', options: ['First-In, First-Out (FIFO)', 'Last-In, First-Out (LIFO)', 'Weighted Average Costing'], value: 'First-In, First-Out (FIFO)' }
+        ]
+      },
+
+      // 6. INVENTORY
+      'warehouse_master': {
+        title: 'Warehouse / Location Master',
+        category: 'Inventory & Procurement Settings',
+        description: 'Create and map storage warehouses and physical store shelves.',
+        fields: [
+          { name: 'whCount', label: 'Registered Storage Warehouses', type: 'number', value: '3', disabled: true },
+          { name: 'transitWh', label: 'Transit / Delivery Stock Location', type: 'text', value: 'Transit-WH-Global' }
+        ]
+      },
+      'uom_config': {
+        title: 'Unit of Measure (UOM) Configuration',
+        category: 'Inventory & Procurement Settings',
+        description: 'Establish standard product packing ratios and primary unit representations.',
+        fields: [
+          { name: 'defUom', label: 'Default Product Unit class', type: 'select', options: ['PCS', 'MT', 'Box', 'KG', 'Ltr'], value: 'PCS' },
+          { name: 'fractionUom', label: 'Allow fractional quantities (e.g. 1.25 kg)', type: 'toggle', value: true }
+        ]
+      },
+      'reorder_rules': {
+        title: 'Reorder Level & Safety Stock Rules',
+        category: 'Inventory & Procurement Settings',
+        description: 'Configure automated trigger rules for generating purchase requisitions.',
+        fields: [
+          { name: 'safetyStockPct', label: 'Safety Stock Margin percentage (%)', type: 'number', value: '15' },
+          { name: 'autoReorderPo', label: 'Auto-generate PO draft on reorder breach', type: 'toggle', value: false }
+        ]
+      },
+      'approval_workflows': {
+        title: 'Approval Workflows',
+        category: 'Inventory & Procurement Settings',
+        description: 'Design authorization limit chains for purchase requisitions.',
+        fields: [
+          { name: 'poLimit', label: 'Manager Purchase Limit without Director signoff ($)', type: 'number', value: '10000' },
+          { name: 'strictApproval', label: 'Reject purchase receipts without matching PO approvals', type: 'toggle', value: true }
+        ]
+      },
+      'vendor_master': {
+        title: 'Vendor Master & Rating Criteria',
+        category: 'Inventory & Procurement Settings',
+        description: 'Set quality score guidelines and delivery tolerance limits for vendor ranks.',
+        fields: [
+          { name: 'scoreMin', label: 'Minimum rating for preferred vendor tier', type: 'number', value: '80' },
+          { name: 'evalPeriod', label: 'Rating recalculation window (Months)', type: 'number', value: '6' }
+        ]
+      },
+      'serial_tracking': {
+        title: 'Batch/Serial Number Tracking Rules',
+        category: 'Inventory & Procurement Settings',
+        description: 'Manage expiration checks, serial number ranges, and batch control policies.',
+        fields: [
+          { name: 'trackExpiration', label: 'Mandate expiration dates on batch receipts', type: 'toggle', value: true },
+          { name: 'serialLength', label: 'Standard Serial number length (characters)', type: 'number', value: '12' }
+        ]
+      },
+
+      // 7. MANUFACTURING
+      'bom_config': {
+        title: 'BOM Configuration',
+        category: 'Manufacturing / MRP Settings',
+        description: 'Define component wastage limits and revision control policies for manufacturing BOMs.',
+        fields: [
+          { name: 'wastagePct', label: 'Standard BOM component wastage limit (%)', type: 'number', value: '5' },
+          { name: 'revisionControl', label: 'Enforce Revision control on Bill of Materials', type: 'toggle', value: true }
+        ]
+      },
+      'work_center_master': {
+        title: 'Routing & Work Center Master',
+        category: 'Manufacturing / MRP Settings',
+        description: 'Configure overhead rates, setup times, and machinery center definitions.',
+        fields: [
+          { name: 'hourlyRate', label: 'Default work center overhead rate ($/hr)', type: 'number', value: '45' },
+          { name: 'setupTime', label: 'Standard machine setup time allowances (mins)', type: 'number', value: '15' }
+        ]
+      },
+      'production_rules': {
+        title: 'Production Planning Rules',
+        category: 'Manufacturing / MRP Settings',
+        description: 'Set material reservations, capacity models, and manufacturing schedule leads.',
+        fields: [
+          { name: 'leadDays', label: 'Standard production buffer lead time (Days)', type: 'number', value: '3' },
+          { name: 'reserveStock', label: 'Reserve raw components upon work order approval', type: 'toggle', value: true }
+        ]
+      },
+      'quality_checkpoints': {
+        title: 'Quality Control Checkpoints',
+        category: 'Manufacturing / MRP Settings',
+        description: 'Configure inspection templates and failure threshold percentages.',
+        fields: [
+          { name: 'qaSamplePct', label: 'Batch Sampling rate for QA check (%)', type: 'number', value: '10' },
+          { name: 'qaBlock', label: 'Freeze inventory usage on batch QA failure', type: 'toggle', value: true }
+        ]
+      },
+      'shift_planning': {
+        title: 'Shift & Capacity Planning',
+        category: 'Manufacturing / MRP Settings',
+        description: 'Manage factory operation schedules, shift limits, and overtime rules.',
+        fields: [
+          { name: 'shiftsCount', label: 'Active manufacturing shifts per day', type: 'select', options: ['1 Shift (8hr)', '2 Shifts (16hr)', '3 Shifts (24hr Continuous)'], value: '2 Shifts (16hr)' },
+          { name: 'otAllowed', label: 'Enable factory overtime calculations', type: 'toggle', value: true }
+        ]
+      },
+
+      // 8. SALES & CRM
+      'crm_pipeline': {
+        title: 'Sales Pipeline Stages',
+        category: 'Sales & CRM Settings',
+        description: 'Maintain sales stages and closing probability mappings.',
+        fields: [
+          { name: 'stagesList', label: 'Lead Pipeline Stages', type: 'text', value: 'Qualification, Proposal Sent, Negotiation, Closed Won', disabled: true },
+          { name: 'winWeight', label: 'Default closing probability weight (%)', type: 'number', value: '35' }
+        ]
+      },
+      'lead_scoring': {
+        title: 'Lead Scoring Rules',
+        category: 'Sales & CRM Settings',
+        description: 'Declare scoring indicators based on client actions, volume, and budget ranges.',
+        fields: [
+          { name: 'scoreScale', label: 'Max qualification rank score', type: 'number', value: '100' },
+          { name: 'scoringEmail', label: 'Award points for valid company domain email', type: 'number', value: '15' }
+        ]
+      },
+      'quotation_templates': {
+        title: 'Quotation/Order Templates',
+        category: 'Sales & CRM Settings',
+        description: 'Choose template formats and design print terms for customer quotes.',
+        fields: [
+          { name: 'quoteValidDays', label: 'Standard quotation validity (Days)', type: 'number', value: '30' },
+          { name: 'termsQuote', label: 'Legal Disclaimers & General SLA notes', type: 'textarea', value: 'Prices are subject to market adjustments after validity period.' }
+        ]
+      },
+      'discount_rules': {
+        title: 'Discount & Pricing Rules',
+        category: 'Sales & CRM Settings',
+        description: 'Manage discount caps, customer price lists, and trade promo mappings.',
+        fields: [
+          { name: 'maxClerkDiscount', label: 'Standard clerk discount cap (%)', type: 'number', value: '5' },
+          { name: 'bulkDiscountQty', label: 'Minimum quantity for bulk tier activation', type: 'number', value: '500' }
+        ]
+      },
+      'customer_segments': {
+        title: 'Customer Segmentation Tags',
+        category: 'Sales & CRM Settings',
+        description: 'Manage classification badges (Tier-1, VIP) for loyalty reports.',
+        fields: [
+          { name: 'segments', label: 'Active segment badges', type: 'text', value: 'Tier-1, VIP, Distributor, Retailer', disabled: true },
+          { name: 'autoVIP', label: 'Auto-flag customers exceeding $100k annual sales as VIP', type: 'toggle', value: true }
+        ]
+      },
+      'sales_territories': {
+        title: 'Territory & Sales Team Mapping',
+        category: 'Sales & CRM Settings',
+        description: 'Delegate regional zip codes and geographical locations to sales reps.',
+        fields: [
+          { name: 'regionCode', label: 'Default region code node', type: 'text', value: 'AMER-EAST' },
+          { name: 'commissionPct', label: 'Standard sales team target achievement commission (%)', type: 'number', value: '2.5' }
+        ]
+      },
+
+      // 9. HR & PAYROLL
+      'employee_fields': {
+        title: 'Employee Master Fields',
+        category: 'HR & Payroll Settings',
+        description: 'Configure standard fields and active custom metadata tags in the employee registry.',
+        fields: [
+          { name: 'employeeIdFormat', label: 'Employee ID generation format', type: 'text', value: 'EMP-[0-9]{3}' },
+          { name: 'collectBloodGroup', label: 'Require emergency medical records', type: 'toggle', value: true }
+        ]
+      },
+      'salary_components': {
+        title: 'Salary Structure & Components',
+        category: 'HR & Payroll Settings',
+        description: 'Maintain salary configurations including Basic Pay, HRA, allowance codes, and deductions.',
+        fields: [
+          { name: 'basicPct', label: 'Basic Salary allocation percentage (%)', type: 'number', value: '50' },
+          { name: 'hraPct', label: 'HRA allowance percentage (%)', type: 'number', value: '40' }
+        ]
+      },
+      'hr_compliance': {
+        title: 'Statutory Compliance (PF/ESI/PT)',
+        category: 'HR & Payroll Settings',
+        description: 'Set PF rates, tax deductions, and standard local compliance parameters.',
+        fields: [
+          { name: 'pfRate', label: 'PF Employee contribution rate (%)', type: 'number', value: '12' },
+          { name: 'esiRate', label: 'ESI contribution rate (%)', type: 'number', value: '0.75' }
+        ]
+      },
+      'leave_policy': {
+        title: 'Leave Policy & Attendance Rules',
+        category: 'HR & Payroll Settings',
+        description: 'Establish leave accruals, casual leave caps, and overtime rules.',
+        fields: [
+          { name: 'annualLeaves', label: 'Annual paid leave days allowance', type: 'number', value: '24' },
+          { name: 'carryForwardLimit', label: 'Max carry forward days to next fiscal year', type: 'number', value: '10' }
+        ]
+      },
+      'hr_shifts': {
+        title: 'Shift Scheduling',
+        category: 'HR & Payroll Settings',
+        description: 'Configure corporate shift models, weekly holidays, and grace time parameters.',
+        fields: [
+          { name: 'graceMins', label: 'Attendance login grace time (Minutes)', type: 'number', value: '15' },
+          { name: 'halfDayMins', label: 'Minimum daily attendance minutes for half-day status', type: 'number', value: '240' }
+        ]
+      },
+      'payroll_chain': {
+        title: 'Payroll Cycle & Approval Chain',
+        category: 'HR & Payroll Settings',
+        description: 'Set monthly closing dates and assign payroll approval chains.',
+        fields: [
+          { name: 'closingDay', label: 'Payroll generation day of month', type: 'number', value: '28' },
+          { name: 'auditChainRequired', label: 'Require double-signoff before salary disbursements', type: 'toggle', value: true }
+        ]
+      },
+
+      // 10. INTEGRATIONS & API
+      'db_connection': {
+        title: 'Database Connection',
+        category: 'Integrations & API Management',
+        description: 'Configure and test the primary database engine connection.',
+        fields: [
+          { name: 'dbHost', label: 'Database Host Server', type: 'text', value: 'sql-prod-cluster.apexcorp.local' },
+          { name: 'dbName', label: 'Initial Database catalog', type: 'text', value: 'NEXOS_ERP_PROD' },
+          { name: 'dbUser', label: 'Database User credential login', type: 'text', value: 'erp_app_sa' },
+          { name: 'maxPool', label: 'Maximum connection pool limit', type: 'number', value: '150' }
+        ]
+      },
+      'third_party': {
+        title: 'Third-Party App Connectors',
+        category: 'Integrations & API Management',
+        description: 'Link SMS channels, email hosts, tax servers, and payment gateways.',
+        fields: [
+          { name: 'smtpHost', label: 'Outgoing SMTP Server Address', type: 'text', value: 'smtp.sendgrid.net' },
+          { name: 'smtpPort', label: 'SMTP Connection Port', type: 'number', value: '587' },
+          { name: 'smsSender', label: 'SMS API Gateway Sender Code', type: 'text', value: 'APEXTR' }
+        ]
+      },
+      'api_webhooks': {
+        title: 'API Key Management & Webhooks',
+        category: 'Integrations & API Management',
+        description: 'Generate client authentication tokens and register payload delivery webhooks.',
+        customRender: 'renderApiWebhooks'
+      },
+      'import_export': {
+        title: 'Import/Export Templates',
+        category: 'Integrations & API Management',
+        description: 'Configure mappings for uploading CSV/Excel sheets into ledger accounts.',
+        fields: [
+          { name: 'allowOverwrites', label: 'Allow item overrides on CSV identifier collisions', type: 'toggle', value: false },
+          { name: 'strictSchema', label: 'Validate CSV headers against system column schema', type: 'toggle', value: true }
+        ]
+      },
+      'edi_setup': {
+        title: 'EDI / B2B Integration Setup',
+        category: 'Integrations & API Management',
+        description: 'Configure document transfer rules (EDIFACT, ANSI X12) for automated B2B transactions.',
+        fields: [
+          { name: 'ediEnabled', label: 'Enable EDI system listener daemon', type: 'toggle', value: false },
+          { name: 'isaSenderId', label: 'ISA Interchange Sender ID', type: 'text', value: 'APEX_EDI_2026' }
+        ]
+      },
+
+      // 11. NOTIFICATIONS
+      'alert_rules': {
+        title: 'Event-Based Alert Rules',
+        category: 'Notifications & Alerts',
+        description: 'Configure automated system alerts based on inventory thresholds or client balances.',
+        fields: [
+          { name: 'alertLowStock', label: 'Send alerts when product qty hits safety level', type: 'toggle', value: true },
+          { name: 'alertOverdue', label: 'Send warning on invoices overdue past 45 days', type: 'toggle', value: true }
+        ]
+      },
+      'notification_channels': {
+        title: 'Notification Channels',
+        category: 'Notifications & Alerts',
+        description: 'Toggle email alerts, push updates, SMS delivery, or webhooks.',
+        fields: [
+          { name: 'sendEmail', label: 'Primary Email alert channel', type: 'toggle', value: true },
+          { name: 'sendSms', label: 'SMS broadcast emergency backup channel', type: 'toggle', value: false },
+          { name: 'sendPush', label: 'In-app desktop push notifications', type: 'toggle', value: true }
+        ]
+      },
+      'escalation_matrix': {
+        title: 'Escalation Matrix',
+        category: 'Notifications & Alerts',
+        description: 'Set duration parameters before escalations trigger notification transfers.',
+        fields: [
+          { name: 'escHours', label: 'Delay before escalating pending approvals to supervisor (Hours)', type: 'number', value: '48' },
+          { name: 'strictEscalation', label: 'Auto-delegate tasks on escalation triggers', type: 'toggle', value: true }
+        ]
+      },
+      'alert_templates': {
+        title: 'Custom Alert Templates',
+        category: 'Notifications & Alerts',
+        description: 'Customize layout text for system warning broadcasts.',
+        fields: [
+          { name: 'overdueTemplate', label: 'Invoice Overdue Notification text', type: 'textarea', value: 'Dear customer, invoice {invoice_no} is overdue for payment. Please settle balances.' }
+        ]
+      },
+
+      // 12. AUDIT
+      'audit_logs': {
+        title: 'Audit Log Viewer & Retention Policy',
+        category: 'Audit, Compliance & Backup',
+        description: 'Set log storage limits and read technical history logs.',
+        fields: [
+          { name: 'logRetentionDays', label: 'Log files retention interval (Days)', type: 'number', value: '365' },
+          { name: 'auditLevel', label: 'Audit scope detail parameters', type: 'select', options: ['Minimal - Actions only', 'Standard - Before/After values', 'Verbose - Deep tracing data'], value: 'Standard - Before/After values' }
+        ]
+      },
+      'backup_manager': {
+        title: 'Data Backup Schedule & Restore Points',
+        category: 'Audit, Compliance & Backup',
+        description: 'Configure automated backup routines and verify restore snapshots.',
+        customRender: 'renderBackupManager'
+      },
+      'gdpr_controls': {
+        title: 'GDPR / Data Privacy Controls',
+        category: 'Audit, Compliance & Backup',
+        description: 'Set customer record erasure controls and data anonymization parameters.',
+        fields: [
+          { name: 'gdprMode', label: 'Anonymize personal customer records on deletion requests', type: 'toggle', value: true },
+          { name: 'consentMandatory', label: 'Mandate cookie & data processing consent flags', type: 'toggle', value: true }
+        ]
+      },
+      'regulatory_checklist': {
+        title: 'Regulatory Compliance Checklist',
+        category: 'Audit, Compliance & Backup',
+        description: 'Verify system configurations against regional regulatory frameworks.',
+        fields: [
+          { name: 'soxCheck', label: 'SOX section 404 audit configurations active', type: 'toggle', value: true },
+          { name: 'iso27001Check', label: 'Validate system password rules against ISO 27001 guidelines', type: 'toggle', value: true }
+        ]
+      },
+      'doc_retention': {
+        title: 'Document Retention Rules',
+        category: 'Audit, Compliance & Backup',
+        description: 'Set automatic deletion schedules for old PDFs and attachment files.',
+        fields: [
+          { name: 'pdfRetentionYears', label: 'Financial document retention duration (Years)', type: 'number', value: '7' }
+        ]
+      },
+
+      // 13. CUSTOMIZATION
+      'custom_fields': {
+        title: 'Custom Field Builder',
+        category: 'Customization & Workflow',
+        description: 'Add custom data fields dynamically into ledger, sales, or vendor pages.',
+        fields: [
+          { name: 'targetModule', label: 'Target Module for custom field insertion', type: 'select', options: ['Ledger Accounts', 'Products Master', 'Sales Invoice', 'BOM Header'], value: 'Ledger Accounts' },
+          { name: 'fieldName', label: 'Custom Field Identifier / Key', type: 'text', value: 'custom_cost_centre_ref' },
+          { name: 'fieldType', label: 'Field Type / Format', type: 'select', options: ['Text', 'Number', 'Checkbox', 'Date Dropdown'], value: 'Text' }
+        ]
+      },
+      'workflow_builder': {
+        title: 'Workflow / Approval Builder',
+        category: 'Customization & Workflow',
+        description: 'Assign conditional roles to purchase or order validation pipelines.',
+        fields: [
+          { name: 'enforceWorkflow', label: 'Enforce custom multi-stage approval workflow', type: 'toggle', value: true },
+          { name: 'stepsCount', label: 'Maximum steps in approval pipelines', type: 'number', value: '5' }
+        ]
+      },
+      'report_builder_access': {
+        title: 'Report & Dashboard Builder Access',
+        category: 'Customization & Workflow',
+        description: 'Manage builder authorizations for creating custom dashboard charts.',
+        fields: [
+          { name: 'clerkAccess', label: 'Allow clerks to design custom balance sheets', type: 'toggle', value: false },
+          { name: 'sqlReporting', label: 'Allow execution of custom SQL commands inside reports', type: 'toggle', value: false }
+        ]
+      },
+      'print_designer': {
+        title: 'Print Format / Document Template Designer',
+        category: 'Customization & Workflow',
+        description: 'Manage layout styling (margins, columns, fonts) for sales receipts and invoice prints.',
+        fields: [
+          { name: 'paperSize', label: 'Default output document format', type: 'select', options: ['A4 Standard', 'Letter size', 'Thermal Roll (80mm)'], value: 'A4 Standard' },
+          { name: 'showLogo', label: 'Include company corporate monogram on prints', type: 'toggle', value: true }
+        ]
+      },
+      'design_customizer': {
+        title: 'Theme & Design Customizer',
+        category: 'Customization & Workflow',
+        description: 'Edit theme modes, accent colors, typography, and component shapes.',
+        customRender: 'renderDesignCustomizer'
+      },
+      'custom_numbering': {
+        title: 'Custom Numbering & Naming Series',
+        category: 'Customization & Workflow',
+        description: 'Set custom numbering lengths and dynamic fiscal variables in prefixes.',
+        fields: [
+          { name: 'padZeroes', label: 'Pad voucher numbering series with zeros', type: 'number', value: '4' },
+          { name: 'resetAnnual', label: 'Reset numbering indexes annually on fiscal starts', type: 'toggle', value: true }
+        ]
+      },
+
+      // 14. MAINTENANCE
+      'cache_management': {
+        title: 'Cache Management / Clear Cache',
+        category: 'System Maintenance',
+        description: 'Clear system caches and rebuild dynamic code assemblies.',
+        customRender: 'renderCacheManagement'
+      },
+      'background_jobs': {
+        title: 'Scheduled Jobs & Background Tasks',
+        category: 'System Maintenance',
+        description: 'Monitor currency updates, report compiles, and routine tasks in real-time.',
+        fields: [
+          { name: 'maxBackgroundThreads', label: 'Maximum background parallel worker threads', type: 'number', value: '8' },
+          { name: 'taskTimeoutMins', label: 'Force terminate stalled tasks after (Minutes)', type: 'number', value: '30' }
+        ]
+      },
+      'system_logs': {
+        title: 'System Logs & Error Tracker',
+        category: 'System Maintenance',
+        description: 'View standard system exceptions and track technical performance warnings.',
+        fields: [
+          { name: 'streamLogs', label: 'Stream core application warnings directly to syslog server', type: 'toggle', value: false },
+          { name: 'syslogServer', label: 'Remote syslog target server IP', type: 'text', value: '10.0.8.55' }
+        ]
+      },
+      'storage_cleanup': {
+        title: 'Storage Usage & Cleanup Tools',
+        category: 'System Maintenance',
+        description: 'Audit storage drives and remove old debug dumps.',
+        fields: [
+          { name: 'usedSpace', label: 'Current Disk Usage space percentage', type: 'text', value: '42.8 GB / 100 GB (42.8% used)', disabled: true },
+          { name: 'cleanupDumps', label: 'Remove debug dump logs older than 7 days', type: 'toggle', value: true }
+        ]
+      },
+      'sandbox_reset': {
+        title: 'Sandbox & Test Data Reset',
+        category: 'System Maintenance',
+        description: 'Restore settings defaults and flush out transaction logs.',
+        customRender: 'renderSandboxReset'
+      }
+    };
+
+    const settingsSchema = (() => {
+      const saved = localStorage.getItem('nexos_settings_schema');
+      if (!saved) return defaultSettingsSchema;
+      try {
+        const parsed = JSON.parse(saved);
+        for (const subKey in defaultSettingsSchema) {
+          if (parsed[subKey]) {
+            if (defaultSettingsSchema[subKey].fields && parsed[subKey].fields) {
+              defaultSettingsSchema[subKey].fields.forEach(defaultField => {
+                const savedField = parsed[subKey].fields.find(f => f.name === defaultField.name);
+                if (savedField) {
+                  defaultField.value = savedField.value;
+                }
+              });
+            }
+          }
+        }
+        return defaultSettingsSchema;
+      } catch (e) {
+        console.error("Error merging saved settings schema:", e);
+        return defaultSettingsSchema;
+      }
+    })();
+
+    // Category mappings with Google Icons & default expansion states
+    const categoriesList = [
+      { id: 'general', title: '1. GENERAL / ORGANIZATION', icon: 'corporate_fare', subKeys: ['company_profile', 'branches', 'fiscal_year', 'locale', 'currency', 'cost_centers'], badge: 'Active' },
+      { id: 'modules', title: '2. MODULES & LICENSING', icon: 'toggle_on', subKeys: ['module_matrix', 'licensing', 'feature_flags', 'subscription'], badge: 'Active' },
+      { id: 'version', title: '3. VERSION & SYSTEM UPDATES', icon: 'system_update', subKeys: ['build_info', 'version_tracker', 'update_scheduler', 'changelog', 'update_history', 'environment'], badge: 'Update' },
+      { id: 'users', title: '4. USER MANAGEMENT & SECURITY', icon: 'security', subKeys: ['user_accounts', 'rbac_matrix', 'permission_groups', 'two_factor', 'sso_config', 'session_policies', 'ip_whitelisting', 'login_activity'], badge: 'Active' },
+      { id: 'finance', title: '5. FINANCE & ACCOUNTING CONFIG', icon: 'account_balance', subKeys: ['chart_of_accounts', 'tax_config', 'e_invoicing', 'numbering_series', 'payment_terms', 'bank_master', 'costing_method'], badge: 'Active' },
+      { id: 'inventory', title: '6. INVENTORY & PROCUREMENT SETTINGS', icon: 'inventory_2', subKeys: ['warehouse_master', 'uom_config', 'reorder_rules', 'approval_workflows', 'vendor_master', 'serial_tracking'], badge: 'Active' },
+      { id: 'manufacturing', title: '7. MANUFACTURING / MRP SETTINGS', icon: 'precision_manufacturing', subKeys: ['bom_config', 'work_center_master', 'production_rules', 'quality_checkpoints', 'shift_planning'], badge: 'Setup' },
+      { id: 'sales_crm', title: '8. SALES & CRM SETTINGS', icon: 'contact_page', subKeys: ['crm_pipeline', 'lead_scoring', 'quotation_templates', 'discount_rules', 'customer_segments', 'sales_territories'], badge: 'Active' },
+      { id: 'hr_payroll', title: '9. HR & PAYROLL SETTINGS', icon: 'badge', subKeys: ['employee_fields', 'salary_components', 'hr_compliance', 'leave_policy', 'hr_shifts', 'payroll_chain'], badge: 'Active' },
+      { id: 'integrations', title: '10. INTEGRATIONS & API MANAGEMENT', icon: 'settings_ethernet', subKeys: ['db_connection', 'third_party', 'api_webhooks', 'import_export', 'edi_setup'], badge: 'Active' },
+      { id: 'notifications', title: '11. NOTIFICATIONS & ALERTS', icon: 'notifications_active', subKeys: ['alert_rules', 'notification_channels', 'escalation_matrix', 'alert_templates'], badge: 'Active' },
+      { id: 'audit_backup', title: '12. AUDIT, COMPLIANCE & BACKUP', icon: 'restore_page', subKeys: ['audit_logs', 'backup_manager', 'gdpr_controls', 'regulatory_checklist', 'doc_retention'], badge: 'Active' },
+      { id: 'customization', title: '13. CUSTOMIZATION & WORKFLOW', icon: 'dashboard_customize', subKeys: ['custom_fields', 'workflow_builder', 'report_builder_access', 'print_designer', 'design_customizer', 'custom_numbering'], badge: 'Active' },
+      { id: 'maintenance', title: '14. SYSTEM MAINTENANCE', icon: 'build_circle', subKeys: ['cache_management', 'background_jobs', 'system_logs', 'storage_cleanup', 'sandbox_reset'], badge: 'Active' }
+    ];
+
+    // State properties for custom rendered panels
+    const customPanelState = {
+      modules: [
+        { name: 'Core Accounts & General Ledger', active: true, essential: true },
+        { name: 'Accounts Payable & Receivable', active: true, essential: true },
+        { name: 'Inventory & Materials Management', active: true, essential: false },
+        { name: 'Payroll & HR Administration', active: true, essential: false },
+        { name: 'Sales & CRM Deals Engine', active: true, essential: false },
+        { name: 'Manufacturing (BOM & Routing)', active: false, essential: false }
+      ],
+      rbac: {
+        permissions: ['Read ledger', 'Post journal entries', 'Approve payroll', 'Modify BOM routes', 'Configure integrations', 'Trigger system rollbacks'],
+        roles: ['Administrator', 'Accountant', 'Sales Representative', 'Manager'],
+        matrix: {
+          'Administrator': [true, true, true, true, true, true],
+          'Accountant': [true, true, false, false, false, false],
+          'Sales Representative': [true, false, false, false, false, false],
+          'Manager': [true, true, true, false, true, false]
+        }
+      },
+      apiKeys: [
+        { name: 'Google Studio API Connector', key: 'nx_live_gemini_f7832...b1', created: '2026-07-01' },
+        { name: 'Tax Portal API Endpoint', key: 'nx_eway_statutory_9901...a8', created: '2026-07-05' }
+      ],
+      backups: [
+        { name: 'NEXOS_AUTO_DAILY_BK_2026-07-11.bak', size: '242 MB', date: '2026-07-11 23:59:00', type: 'System Auto' },
+        { name: 'NEXOS_LEDGER_PREPATCH_RESTORE.bak', size: '241 MB', date: '2026-07-09 12:04:10', type: 'Manual Admin' }
+      ],
+      design: {
+        theme: 'light',
+        contrast: '1',
+        accent: '#12A594'
+      }
+    };
+
+    let activeSubKey = 'company_profile';
+
+    // Toggle expansion of categories in sidebar
+    function toggleCategory(catId) {
+      const el = document.getElementById(`cat-group-${catId}`);
+      if (!el) return;
+      el.classList.toggle('expanded');
+    }
+
+    // Handle left menu click
+    function selectSubitem(subKey) {
+      activeSubKey = subKey;
+      
+      // Update sidebar styling
+      document.querySelectorAll('.subitem-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('data-subkey') === subKey) {
+          link.classList.add('active');
+        }
+      });
+
+      // Expand parent category automatically
+      const targetSub = settingsSchema[subKey];
+      if (targetSub) {
+        const catObj = categoriesList.find(c => c.subKeys.includes(subKey));
+        if (catObj) {
+          const pEl = document.getElementById(`cat-group-${catObj.id}`);
+          if (pEl && !pEl.classList.contains('expanded')) {
+            pEl.classList.add('expanded');
+          }
+          
+          // Update breadcrumbs
+          document.getElementById('breadcrumbs').innerHTML = `
+            <span>Settings</span>
+            <span class="bc-separator">&gt;</span>
+            <span>${catObj.title.replace(/^\d+\.\s+/, '').split(' / ')[0]}</span>
+            <span class="bc-separator">&gt;</span>
+            <span class="bc-active">${targetSub.title}</span>
+          `;
+        }
+      }
+
+      // Render settings content card
+      renderSettingsCard();
+    }
+
+    // Render left sidebar menu dynamically
+    function renderSidebar() {
+      const container = document.getElementById('categories-menu');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      categoriesList.forEach(cat => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = `category-group`;
+        groupDiv.id = `cat-group-${cat.id}`;
+        
+        let badgeHtml = '';
+        if (cat.badge === 'Update') badgeHtml = `<span class="badge-status update">Update</span>`;
+        else if (cat.badge === 'Setup') badgeHtml = `<span class="badge-status setup">Setup</span>`;
+        
+        let subitemsHtml = '';
+        cat.subKeys.forEach(subKey => {
+          const subObj = settingsSchema[subKey];
+          if (subObj) {
+            subitemsHtml += `
+              <a href="#" class="subitem-link ${activeSubKey === subKey ? 'active' : ''}" 
+                 data-subkey="${subKey}" onclick="event.preventDefault(); selectSubitem('${subKey}')">
+                <span>${subObj.title}</span>
+              </a>
+            `;
+          }
+        });
+
+        groupDiv.innerHTML = `
+          <div class="category-header" onclick="toggleCategory('${cat.id}')">
+            <span class="material-icons-round category-icon">${cat.icon}</span>
+            <span class="category-label">${cat.title}</span>
+            ${badgeHtml}
+            <span class="material-icons-round category-chevron">chevron_right</span>
+          </div>
+          <div class="category-subitems">
+            ${subitemsHtml}
+          </div>
+        `;
+        
+        container.appendChild(groupDiv);
+      });
+
+      // Expand default category
+      selectSubitem(activeSubKey);
+    }
+
+    // Filter sidebar search results
+    function filterSettings() {
+      const val = document.getElementById('settings-search').value.toLowerCase().trim();
+      
+      categoriesList.forEach(cat => {
+        const catEl = document.getElementById(`cat-group-${cat.id}`);
+        if (!catEl) return;
+        
+        let hasMatch = false;
+        
+        // Check sub-items
+        cat.subKeys.forEach(subKey => {
+          const subObj = settingsSchema[subKey];
+          const linkEl = catEl.querySelector(`[data-subkey="${subKey}"]`);
+          if (subObj && linkEl) {
+            const label = subObj.title.toLowerCase();
+            const desc = subObj.description.toLowerCase();
+            const matches = label.includes(val) || desc.includes(val) || cat.title.toLowerCase().includes(val);
+            
+            if (matches) {
+              linkEl.style.display = 'flex';
+              hasMatch = true;
+            } else {
+              linkEl.style.display = 'none';
+            }
+          }
+        });
+
+        if (hasMatch || cat.title.toLowerCase().includes(val)) {
+          catEl.style.display = 'block';
+          if (val.length > 0) {
+            catEl.classList.add('expanded');
+          }
+        } else {
+          catEl.style.display = 'none';
+          catEl.classList.remove('expanded');
+        }
+      });
+      
+      if (val.length === 0) {
+        // Close all except the active category
+        categoriesList.forEach(cat => {
+          const catEl = document.getElementById(`cat-group-${cat.id}`);
+          if (catEl) {
+            if (cat.subKeys.includes(activeSubKey)) {
+              catEl.classList.add('expanded');
+            } else {
+              catEl.classList.remove('expanded');
+            }
+          }
+        });
+      }
+    }
+
+    // Dynamic schema renderer
+    function renderSettingsCard() {
+      const card = document.getElementById('settings-card');
+      const targetSub = settingsSchema[activeSubKey];
+      if (!card || !targetSub) return;
+      
+      // Update page title & description
+      document.getElementById('page-title').textContent = targetSub.title;
+      document.getElementById('page-description').textContent = targetSub.description;
+      
+      card.innerHTML = '';
+      
+      // 1. Check for custom render panels
+      if (targetSub.customRender) {
+        const renderFn = window[targetSub.customRender];
+        if (typeof renderFn === 'function') {
+          renderFn(card);
+        }
+        return;
+      }
+      
+      // 2. Render standard form layout
+      let formHtml = `<form id="settings-dynamic-form" onsubmit="event.preventDefault(); saveDynamicSettings();">`;
+      formHtml += `<div class="form-grid">`;
+      
+      targetSub.fields.forEach(f => {
+        const isSpan2 = f.type === 'textarea' ? 'span-2' : '';
+        const disabledAttr = f.disabled ? 'disabled' : '';
+        
+        formHtml += `<div class="form-group ${isSpan2}">`;
+        formHtml += `<label class="form-label" for="field-${f.name}">${f.label}</label>`;
+        
+        if (f.type === 'textarea') {
+          formHtml += `<textarea id="field-${f.name}" class="form-input form-textarea" ${disabledAttr}>${f.value}</textarea>`;
+        } else if (f.type === 'select') {
+          formHtml += `<select id="field-${f.name}" class="form-input" ${disabledAttr}>`;
+          f.options.forEach(opt => {
+            const sel = f.value === opt ? 'selected' : '';
+            formHtml += `<option value="${opt}" ${sel}>${opt}</option>`;
+          });
+          formHtml += `</select>`;
+        } else if (f.type === 'toggle') {
+          formHtml += `
+            <div class="toggle-control">
+              <label class="switch">
+                <input type="checkbox" id="field-${f.name}" ${f.value ? 'checked' : ''} ${disabledAttr}>
+                <span class="slider"></span>
+              </label>
+              <span style="font-size: 13px; color: var(--text-2);">Activate option</span>
+            </div>
+          `;
+        } else {
+          formHtml += `<input type="${f.type || 'text'}" id="field-${f.name}" class="form-input" value="${f.value}" ${disabledAttr}>`;
+        }
+        
+        formHtml += `</div>`;
+      });
+      
+      formHtml += `</div>`;
+      
+      // Form Actions
+      formHtml += `
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" onclick="resetDynamicSettings()">Reset Defaults</button>
+          <button type="submit" class="btn btn-primary" style="background-color: var(--accent);">Save Changes</button>
+        </div>
+      `;
+      formHtml += `</form>`;
+      
+      card.innerHTML = formHtml;
+    }
+
+    // Save Dynamic schema forms
+    function saveDynamicSettings() {
+      const targetSub = settingsSchema[activeSubKey];
+      if (!targetSub || !targetSub.fields) return;
+      
+      targetSub.fields.forEach(f => {
+        const input = document.getElementById(`field-${f.name}`);
+        if (input) {
+          if (f.type === 'toggle') {
+            f.value = input.checked;
+          } else {
+            f.value = input.value;
+          }
+        }
+      });
+      
+      localStorage.setItem('nexos_settings_schema', JSON.stringify(settingsSchema));
+      updateHeaderCompany();
+      showToast('Settings saved successfully.');
+    }
+
+    function updateHeaderCompany() {
+      try {
+        if (settingsSchema.company_profile && settingsSchema.company_profile.fields) {
+          const legalNameField = settingsSchema.company_profile.fields.find(f => f.name === 'legalName');
+          if (legalNameField && legalNameField.value) {
+            const el = document.getElementById('settings-company-name');
+            if (el) el.textContent = legalNameField.value;
+          }
+        }
+      } catch (e) {
+        console.error("Error updating header company:", e);
+      }
+    }
+
+    // Reset fields to schema defaults
+    function resetDynamicSettings() {
+      renderSettingsCard();
+      showToast('Form reset to default parameters.');
+    }
+
+    // Display toast notification
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `
+        <span class="material-icons-round" style="color: var(--accent);">check_circle</span>
+        <span>${msg}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Auto dismiss
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    // ==========================================
+    // CUSTOM RENDERING FUNCTIONS FOR COMPLEX PANELS
+    // ==========================================
+
+    // 1. Module Activation Matrix
+    window.renderModuleMatrix = function(container) {
+      let rows = '';
+      customPanelState.modules.forEach((mod, idx) => {
+        const badge = mod.essential ? `<span class="badge-status active">Core Module</span>` : '';
+        const toggleDisabled = mod.essential ? 'disabled' : '';
+        rows += `
+          <tr>
+            <td class="font-semibold" style="font-size:13px; font-weight:600;">${mod.name} ${badge}</td>
+            <td style="text-align: center;">
+              <label class="switch">
+                <input type="checkbox" id="mod-toggle-${idx}" ${mod.active ? 'checked' : ''} ${toggleDisabled} onchange="toggleModuleState(${idx})">
+                <span class="slider"></span>
+              </label>
+            </td>
+          </tr>
+        `;
+      });
+
+      container.innerHTML = `
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Active Module Subsystem Activation</h3>
+        <p class="text-xs text-muted mb-4">Toggle module daemons across the global ERP ecosystem. Core systems cannot be disabled.</p>
+        
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>Subsystem Name</th>
+              <th style="width: 100px; text-align: center;">Active</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+        
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="renderSettingsCard()">Reset Matrix</button>
+          <button class="btn btn-primary" onclick="saveModules()" style="background-color: var(--accent);">Save Subsystems</button>
+        </div>
+      `;
+    };
+
+    window.toggleModuleState = function(idx) {
+      customPanelState.modules[idx].active = document.getElementById(`mod-toggle-${idx}`).checked;
+    };
+
+    window.saveModules = function() {
+      showToast('Module activation matrix updated.');
+    };
+
+    // 2. Role-Based Access Control Matrix
+    window.renderRBACMatrix = function(container) {
+      let thead = '<tr><th>Permission Name</th>';
+      customPanelState.rbac.roles.forEach(r => {
+        thead += `<th style="text-align:center;">${r}</th>`;
+      });
+      thead += '</tr>';
+
+      let tbody = '';
+      customPanelState.rbac.permissions.forEach((perm, pIdx) => {
+        let cols = `<td>${perm}</td>`;
+        customPanelState.rbac.roles.forEach(r => {
+          const hasAccess = customPanelState.rbac.matrix[r][pIdx];
+          cols += `
+            <td style="text-align:center;">
+              <input type="checkbox" class="matrix-checkbox" id="rbac-${r}-${pIdx}" ${hasAccess ? 'checked' : ''} onchange="toggleRbacCell('${r}', ${pIdx})">
+            </td>
+          `;
+        });
+        tbody += `<tr>${cols}</tr>`;
+      });
+
+      container.innerHTML = `
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Global RBAC Matrix Mapping</h3>
+        <p class="text-xs text-muted mb-4">Click checkboxes to map read/write parameters across core security profiles.</p>
+        
+        <div style="overflow-x:auto;">
+          <table class="matrix-table">
+            <thead>
+              ${thead}
+            </thead>
+            <tbody>
+              ${tbody}
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="renderSettingsCard()">Reset Matrix</button>
+          <button class="btn btn-primary" onclick="showToast('Security authorization matrix updated.');" style="background-color: var(--accent);">Save RBAC Permissions</button>
+        </div>
+      `;
+    };
+
+    window.toggleRbacCell = function(role, pIdx) {
+      const checked = document.getElementById(`rbac-${role}-${pIdx}`).checked;
+      customPanelState.rbac.matrix[role][pIdx] = checked;
+    };
+
+    // 3. API Key & Webhook management
+    window.renderApiWebhooks = function(container) {
+      let rows = '';
+      customPanelState.apiKeys.forEach((k, idx) => {
+        rows += `
+          <div class="log-item">
+            <div>
+              <div style="font-weight:600; font-size:13px;">${k.name}</div>
+              <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--text-2); margin-top:2px;">${k.key}</div>
+            </div>
+            <div style="text-align:right;">
+              <span class="text-muted" style="font-size:10px;">Issued: ${k.created}</span>
+              <button onclick="deleteApiKey(${idx})" style="background:none; border:none; color:var(--warm); cursor:pointer; margin-left:12px;" title="Revoke Key"><span class="material-icons-round" style="font-size:16px;">delete</span></button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 class="font-manrope" style="font-size:16px; font-weight:700;">Active Client API Tokens</h3>
+          <button class="btn btn-sm btn-primary" onclick="generateApiKey()" style="padding:6px 12px; font-size:11px; background-color: var(--accent);">+ Generate Token</button>
+        </div>
+        
+        <div id="api-keys-list" style="margin-bottom:24px;">
+          ${rows || '<div style="padding:15px; text-align:center; color:var(--text-muted);">No client API tokens issued.</div>'}
+        </div>
+        
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Outgoing webhook endpoints</h3>
+        <div class="form-grid">
+          <div class="form-group span-2">
+            <label class="form-label">Active Notification Webhook URL</label>
+            <input type="text" class="form-input" placeholder="https://api.yourcompany.com/webhook" value="https://webhook.site/apex-gateway-ledger">
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="renderSettingsCard()">Reset Config</button>
+          <button class="btn btn-primary" onclick="showToast('Integrations credentials updated.');" style="background-color: var(--accent);">Save Integrations</button>
+        </div>
+      `;
+    };
+
+    window.deleteApiKey = function(idx) {
+      customPanelState.apiKeys.splice(idx, 1);
+      renderSettingsCard();
+      showToast('Client token revoked.');
+    };
+
+    window.generateApiKey = function() {
+      const randHex = Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join('');
+      customPanelState.apiKeys.push({
+        name: `Dynamic Custom Token - ${customPanelState.apiKeys.length + 1}`,
+        key: `nx_live_custom_${randHex}...key`,
+        created: new Date().toISOString().split('T')[0]
+      });
+      renderSettingsCard();
+      showToast('New client API key token generated.');
+    };
+
+    // 4. Data Backup Schedule & Restore Points
+    window.renderBackupManager = function(container) {
+      let rows = '';
+      customPanelState.backups.forEach((b, idx) => {
+        rows += `
+          <div class="log-item">
+            <div>
+              <div style="font-weight:600; font-size:13px; font-family:'JetBrains Mono';">${b.name}</div>
+              <div style="font-size:11px; color:var(--text-2); margin-top:2px;">Size: ${b.size} | Type: ${b.type}</div>
+            </div>
+            <div style="text-align:right; display:flex; align-items:center; gap:8px;">
+              <span class="text-muted" style="font-size:10px;">${b.date}</span>
+              <button class="btn btn-sm btn-secondary" style="padding:4px 8px; font-size:10px;" onclick="restoreBackup('${b.name}')">Restore</button>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 class="font-manrope" style="font-size:16px; font-weight:700;">Statutory Restore Snapshots</h3>
+          <button class="btn btn-sm btn-primary" onclick="createBackup()" style="padding:6px 12px; font-size:11px; background-color: var(--accent);"><span class="material-icons-round" style="font-size:14px;">backup</span> Backup Now</button>
+        </div>
+        
+        <div id="backups-list" style="margin-bottom:24px;">
+          ${rows}
+        </div>
+        
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Data Backup Schedule Config</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Auto-Backup Frequency</label>
+            <select class="form-input">
+              <option value="daily">Every 24 Hours (Daily)</option>
+              <option value="weekly">Every Sunday (Weekly)</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">S3 Cloud Storage Target Bucket</label>
+            <input type="text" class="form-input" value="s3://apex-erp-backup-store/">
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button class="btn btn-secondary" onclick="renderSettingsCard()">Reset Schedule</button>
+          <button class="btn btn-primary" onclick="showToast('Data Backup schedule saved.');" style="background-color: var(--accent);">Save Schedule</button>
+        </div>
+      `;
+    };
+
+    window.restoreBackup = function(name) {
+      showToast(`Initiating data rollback check to snapshot: ${name}`);
+      setTimeout(() => {
+        showToast('System rollback simulation completed successfully.');
+      }, 1000);
+    };
+
+    window.createBackup = function() {
+      showToast('Compiling accounting books and file attachments database...');
+      setTimeout(() => {
+        const randId = Math.floor(Math.random()*9000 + 1000);
+        customPanelState.backups.unshift({
+          name: `NEXOS_MANUAL_BK_GEN-${randId}.bak`,
+          size: '241.8 MB',
+          date: new Date().toISOString().replace('T', ' ').slice(0, 19),
+          type: 'Manual Admin'
+        });
+        renderSettingsCard();
+        showToast('Snapshot generated and dispatched to cloud storage bucket.');
+      }, 1200);
+    };
+
+    // 5. System Maintenance / Cache Clear
+    window.renderCacheManagement = function(container) {
+      container.innerHTML = `
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Web & Cache Assembly Cleanup</h3>
+        <p class="text-xs text-muted mb-4">Purging client browser cache and dynamic query tables resolves schema mismatch issues after update patches.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div class="log-item" style="background-color:#FFFFFF;">
+            <div>
+              <div style="font-weight:600; font-size:13px;">Dynamic Query Code Assemblies</div>
+              <div style="font-size:11px; color:var(--text-muted);">Cache size: 14.8 MB</div>
+            </div>
+            <button class="btn btn-secondary" style="padding:6px 12px; font-size:11px;" onclick="clearSystemCache('code')">Purge</button>
+          </div>
+          <div class="log-item" style="background-color:#FFFFFF;">
+            <div>
+              <div style="font-weight:600; font-size:13px;">Static Print templates pre-compiles</div>
+              <div style="font-size:11px; color:var(--text-muted);">Cache size: 2.1 MB</div>
+            </div>
+            <button class="btn btn-secondary" style="padding:6px 12px; font-size:11px;" onclick="clearSystemCache('print')">Purge</button>
+          </div>
+        </div>
+      `;
+    };
+
+    window.clearSystemCache = function(type) {
+      showToast(`Flushing ${type} cache buffers...`);
+      setTimeout(() => {
+        showToast('Cache memory buffers cleared.');
+      }, 600);
+    };
+
+    // 6. System Reset / Sandbox data flush
+    window.renderSandboxReset = function(container) {
+      container.innerHTML = `
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700; color:var(--warm);">Enforce Sandbox Data Reset</h3>
+        <p class="text-xs text-muted mb-4">WARNING: This operation flushes out custom settings and database schemas, reverting the setup back to default. This cannot be undone.</p>
+        
+        <div class="card p-4" style="background-color:#FFF3CD; border:1px solid #FFE69C; border-radius:6px; color:#664D03; font-size:12px; line-height:1.5; margin-bottom:20px;">
+          <strong>Pre-execution Warning:</strong> Rolling back settings flushes out the dynamic ledger accounts created in this sandbox instance. Ensure all accounting reports have been exported before resetting.
+        </div>
+        
+        <button class="btn btn-primary" style="background-color: var(--warm); border-color: var(--warm);" onclick="confirmSandboxReset()">
+          <span class="material-icons-round btn-icon">warning</span> Flush Data & Revert
+        </button>
+      `;
+    };
+
+    window.confirmSandboxReset = function() {
+      if (confirm("Are you absolutely sure you want to restore all ERP settings and database parameters to standard defaults?")) {
+        showToast('Dropping transaction tables and resetting schemas...');
+        setTimeout(() => {
+          localStorage.clear();
+          showToast('ERP Sandbox reverted. Reloading page...');
+          setTimeout(() => location.reload(), 1000);
+        }, 1200);
+      }
+    };
+
+    // 7. Interactive Theme Customizer ("where I can edit/customize Design")
+    let previewState = null;
+
+    window.updateContrastBadgeText = function(val) {
+      const badge = document.getElementById('contrast-badge');
+      if (!badge) return;
+      if (val === '1') badge.innerText = 'Standard';
+      else if (val === '2') badge.innerText = 'Increased (WCAG AA)';
+      else badge.innerText = 'Maximum (WCAG AAA)';
+    };
+
+    window.selectPreviewTheme = function(themeId) {
+      if (!previewState) return;
+      previewState.theme = themeId;
+      renderDesignCustomizer(document.getElementById('settings-card'));
+    };
+
+    window.selectPreviewContrast = function(val) {
+      if (!previewState) return;
+      previewState.contrast = val;
+      updateContrastBadgeText(val);
+      renderLivePreviewCard();
+    };
+
+    window.selectPreviewAccent = function(color) {
+      if (!previewState) return;
+      previewState.accent = color;
+      renderDesignCustomizer(document.getElementById('settings-card'));
+    };
+
+    window.updateLivePreviewUI = function(theme, contrast, accent) {
+      const container = document.getElementById('live-preview-card');
+      if (!container) return;
+
+      let bg, surface, text, text2, border;
+      if (theme === 'light') {
+        bg = '#F3F5F9';
+        surface = '#FFFFFF';
+        text = '#161B33';
+        text2 = '#5B6178';
+        border = '#E1E5EC';
+      } else if (theme === 'dark') {
+        bg = '#0B1220';
+        surface = '#172033';
+        text = '#F8FAFC';
+        text2 = '#CBD5E1';
+        border = '#273449';
+      } else if (theme === 'system') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        bg = isDark ? '#0B1220' : '#F3F5F9';
+        surface = isDark ? '#172033' : '#FFFFFF';
+        text = isDark ? '#F8FAFC' : '#161B33';
+        text2 = isDark ? '#CBD5E1' : '#5B6178';
+        border = isDark ? '#273449' : '#E1E5EC';
+      } else if (theme === 'hc-light') {
+        bg = '#FFFFFF';
+        surface = '#FFFFFF';
+        text = '#000000';
+        text2 = '#000000';
+        border = '#000000';
+      } else if (theme === 'hc-dark') {
+        bg = '#000000';
+        surface = '#000000';
+        text = '#FFFFFF';
+        text2 = '#FFFFFF';
+        border = '#FFFFFF';
+      }
+
+      let borderWidth = '1px';
+      if (contrast === '2') {
+        borderWidth = '2px';
+        if (theme === 'light' || theme === 'system') {
+          text = '#000000';
+          text2 = '#111111';
+        } else if (theme === 'dark') {
+          text = '#FFFFFF';
+          text2 = '#F8FAFC';
+        }
+      } else if (contrast === '3') {
+        borderWidth = '3px';
+        if (theme === 'light' || theme === 'system') {
+          text = '#000000';
+          text2 = '#000000';
+          border = '#000000';
+        } else if (theme === 'dark') {
+          text = '#FFFFFF';
+          text2 = '#FFFFFF';
+          border = '#FFFFFF';
+        }
+      }
+
+      container.style.setProperty('--preview-bg', bg);
+      container.style.setProperty('--preview-surface', surface);
+      container.style.setProperty('--preview-text', text);
+      container.style.setProperty('--preview-text-2', text2);
+      container.style.setProperty('--preview-border', border);
+      container.style.setProperty('--preview-border-width', borderWidth);
+      container.style.setProperty('--preview-accent', accent);
+    };
+
+    window.renderLivePreviewCard = function() {
+      const container = document.getElementById('live-preview-container');
+      if (!container) return;
+
+      container.innerHTML = `
+        <label class="form-label" style="margin-bottom:8px; display:block;">Live Preview Panel (Pre-apply demo)</label>
+        <div id="live-preview-card" style="border: var(--preview-border-width, 1px) solid var(--preview-border); background-color: var(--preview-bg); padding: 16px; border-radius: 8px; transition: all 0.2s;">
+          <div style="font-size: 11px; font-weight: bold; color: var(--preview-text); margin-bottom: 10px; border-bottom: var(--preview-border-width, 1px) solid var(--preview-border); padding-bottom: 6px; display:flex; justify-content:space-between; align-items:center;">
+            <span>NexOS Enterprise - Preview Mode</span>
+            <span style="font-size: 9px; font-weight: normal; opacity: 0.7;">Active Theme: ${previewState.theme.toUpperCase()}</span>
+          </div>
+          <div style="display: flex; gap: 12px; height: 120px; font-size: 10px;">
+            <!-- Mini Sidebar -->
+            <div style="width: 80px; border-right: var(--preview-border-width, 1px) solid var(--preview-border); background-color: var(--preview-surface); padding: 6px; display: flex; flex-direction: column; gap: 6px;">
+              <div style="height: 8px; background-color: var(--preview-border); width: 85%; border-radius: 2px;"></div>
+              <div style="height: 8px; background-color: var(--preview-accent); width: 70%; border-radius: 2px; opacity: 0.85;"></div>
+              <div style="height: 8px; background-color: var(--preview-border); width: 60%; border-radius: 2px;"></div>
+              <div style="height: 8px; background-color: var(--preview-border); width: 80%; border-radius: 2px;"></div>
+            </div>
+            <!-- Mini Main Content -->
+            <div style="flex: 1; background-color: var(--preview-bg); padding: 4px; display: flex; flex-direction: column; gap: 8px; overflow: hidden;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: bold; color: var(--preview-text); font-size: 11px;">Sales Ledger</span>
+                <button style="background-color: var(--preview-accent); color: #FFFFFF; border: none; padding: 3px 8px; font-size: 9px; border-radius: 3px; font-weight: bold; cursor: default;">Post Voucher</button>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+                <thead>
+                  <tr style="background-color: var(--preview-surface); border-bottom: var(--preview-border-width, 1px) solid var(--preview-border);">
+                    <th style="padding: 3px 2px; text-align: left; color: var(--preview-text-2); font-weight:600;">Account</th>
+                    <th style="padding: 3px 2px; text-align: right; color: var(--preview-text-2); font-weight:600;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: var(--preview-border-width, 1px) solid var(--preview-border);">
+                    <td style="padding: 3px 2px; color: var(--preview-text);">Sales Corporate</td>
+                    <td style="padding: 3px 2px; text-align: right; color: var(--preview-accent); font-weight:bold;">Active</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 3px 2px; color: var(--preview-text);">Cash-in-hand</td>
+                    <td style="padding: 3px 2px; text-align: right; color: var(--preview-text-2);">Pending</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Update actual inline preview variables
+      updateLivePreviewUI(previewState.theme, previewState.contrast, previewState.accent);
+    };
+
+    // 7. Interactive Theme Customizer ("where I can edit/customize Design")
+    window.renderDesignCustomizer = function(container) {
+      if (!previewState) {
+        previewState = {
+          theme: customPanelState.design.theme || 'light',
+          contrast: customPanelState.design.contrast || '1',
+          accent: customPanelState.design.accent || '#12A594'
+        };
+      }
+      
+      const themeOptions = [
+        { id: 'light', name: 'Light' },
+        { id: 'dark', name: 'Dark' },
+        { id: 'system', name: 'System' },
+        { id: 'hc-light', name: 'HC Light' },
+        { id: 'hc-dark', name: 'HC Dark' }
+      ];
+
+      let themeThumbs = '';
+      themeOptions.forEach(opt => {
+        const isActive = previewState.theme === opt.id ? 'active' : '';
+        themeThumbs += `
+          <div class="theme-thumb ${isActive}" onclick="selectPreviewTheme('${opt.id}')">
+            <div class="thumb-preview ${opt.id}">
+              <div class="thumb-header"></div>
+              <div class="thumb-body">
+                <div class="thumb-sidebar"></div>
+                <div class="thumb-main"></div>
+              </div>
+            </div>
+            <div class="thumb-label">${opt.name}</div>
+          </div>
+        `;
+      });
+
+      const accentPresets = [
+        '#12A594', // NexOS Original Teal
+        '#1E40AF', // Classic Blue
+        '#4F46E5', // Enterprise Indigo
+        '#E2662F', // Warm Orange
+        '#7C3AED'  // Royal Purple
+      ];
+
+      let accentSwatches = '';
+      accentPresets.forEach(color => {
+        const isActive = previewState.accent.toLowerCase() === color.toLowerCase() ? 'active' : '';
+        accentSwatches += `
+          <div class="color-preset ${isActive}" style="background-color: ${color};" onclick="selectPreviewAccent('${color}')">
+            <span class="material-icons-round preset-icon">check</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = `
+        <h3 class="font-manrope" style="font-size:16px; margin-bottom:12px; font-weight:700;">Theme & Design Customizer</h3>
+        <p class="text-xs text-muted mb-4">Modify your interface styling, background theme, color accent, and visibility parameters. Live changes preview below before applying.</p>
+        
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- 1. Background Theme Picker -->
+          <div>
+            <label class="form-label" style="margin-bottom:8px; display:block;">Background Theme Mode</label>
+            <div class="theme-picker-grid">
+              ${themeThumbs}
+            </div>
+          </div>
+
+          <!-- 2. Contrast Slider -->
+          <div>
+            <label class="form-label" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span>Contrast Level</span>
+              <span id="contrast-badge" style="font-size:11px; font-weight:bold; color:var(--accent);">Standard</span>
+            </label>
+            <div class="contrast-slider-wrapper">
+              <input type="range" id="field-contrast" min="1" max="3" value="${previewState.contrast}" class="form-range" style="width: 100%; accent-color: var(--accent); cursor: pointer;" oninput="selectPreviewContrast(this.value)">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-top: 4px; font-weight: 600;">
+                <span>Standard</span>
+                <span>Increased (AA)</span>
+                <span>Maximum (AAA)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Accent Color -->
+          <div>
+            <label class="form-label" style="margin-bottom:8px; display:block;">Accent Color</label>
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <div class="color-presets" style="margin-top:0;">
+                ${accentSwatches}
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:11px; color:var(--text-2); font-weight:600;">Custom Picker:</span>
+                <input type="color" id="design-accent-picker" value="${previewState.accent}" onchange="selectPreviewAccent(this.value)" style="border:1px solid var(--border); border-radius:4px; cursor:pointer; width:36px; height:24px; padding:0; background:none;">
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Live Preview Panel -->
+          <div id="live-preview-container">
+            <!-- Rendered below -->
+          </div>
+
+          <!-- 5. Actions -->
+          <div class="form-actions" style="margin-top:10px;">
+            <button class="btn btn-secondary" onclick="restoreThemeDefaults()">Restore Standard</button>
+            <button class="btn btn-primary" onclick="saveThemeSettings()" style="background-color: var(--accent);">Apply Theme Styles</button>
+          </div>
+        </div>
+      `;
+
+      // Render the actual live preview panel
+      renderLivePreviewCard();
+      // Sync contrast badge text
+      updateContrastBadgeText(previewState.contrast);
+    };
+
+    function adjustHexColor(hex, percent) {
+      if (!hex.startsWith('#')) return hex;
+      let R = parseInt(hex.substring(1, 3), 16);
+      let G = parseInt(hex.substring(3, 5), 16);
+      let B = parseInt(hex.substring(5, 7), 16);
+
+      R = parseInt(R * (100 + percent) / 100);
+      G = parseInt(G * (100 + percent) / 100);
+      B = parseInt(B * (100 + percent) / 100);
+
+      R = (R < 255) ? R : 255;
+      G = (G < 255) ? G : 255;
+      B = (B < 255) ? B : 255;
+
+      R = (R > 0) ? R : 0;
+      G = (G > 0) ? G : 0;
+      B = (B > 0) ? B : 0;
+
+      const rHex = R.toString(16).padStart(2, '0');
+      const gHex = G.toString(16).padStart(2, '0');
+      const bHex = B.toString(16).padStart(2, '0');
+
+      return `#${rHex}${gHex}${bHex}`;
+    }
+
+    window.applyGlobalTheme = function(theme, contrast, accent) {
+      let bg, surface, text, text2, border;
+      if (theme === 'light') {
+        bg = '#F3F5F9';
+        surface = '#FFFFFF';
+        text = '#161B33';
+        text2 = '#5B6178';
+        border = '#E1E5EC';
+      } else if (theme === 'dark') {
+        bg = '#0B1220';
+        surface = '#172033';
+        text = '#F8FAFC';
+        text2 = '#CBD5E1';
+        border = '#273449';
+      } else if (theme === 'system') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        bg = isDark ? '#0B1220' : '#F3F5F9';
+        surface = isDark ? '#172033' : '#FFFFFF';
+        text = isDark ? '#F8FAFC' : '#161B33';
+        text2 = isDark ? '#CBD5E1' : '#5B6178';
+        border = isDark ? '#273449' : '#E1E5EC';
+      } else if (theme === 'hc-light') {
+        bg = '#FFFFFF';
+        surface = '#FFFFFF';
+        text = '#000000';
+        text2 = '#000000';
+        border = '#000000';
+      } else if (theme === 'hc-dark') {
+        bg = '#000000';
+        surface = '#000000';
+        text = '#FFFFFF';
+        text2 = '#FFFFFF';
+        border = '#FFFFFF';
+      }
+
+      let borderWidth = '1px';
+      if (contrast === '2') {
+        borderWidth = '2px';
+        if (theme === 'light' || theme === 'system') {
+          text = '#000000';
+          text2 = '#111111';
+        } else if (theme === 'dark') {
+          text = '#FFFFFF';
+          text2 = '#F8FAFC';
+        }
+      } else if (contrast === '3') {
+        borderWidth = '3px';
+        if (theme === 'light' || theme === 'system') {
+          text = '#000000';
+          text2 = '#000000';
+          border = '#000000';
+        } else if (theme === 'dark') {
+          text = '#FFFFFF';
+          text2 = '#FFFFFF';
+          border = '#FFFFFF';
+        }
+      }
+
+      document.documentElement.style.setProperty('--bg', bg);
+      document.documentElement.style.setProperty('--surface', surface);
+      document.documentElement.style.setProperty('--text', text);
+      document.documentElement.style.setProperty('--text-2', text2);
+      document.documentElement.style.setProperty('--border', border);
+      document.documentElement.style.setProperty('--border-width', borderWidth);
+      document.documentElement.style.setProperty('--accent', accent);
+
+      let accentDark = accent;
+      let accentTint = 'rgba(18, 165, 148, 0.1)';
+      if (accent.startsWith('#')) {
+        accentDark = adjustHexColor(accent, -20);
+        accentTint = accent + '1A';
+      }
+      document.documentElement.style.setProperty('--accent-dark', accentDark);
+      document.documentElement.style.setProperty('--accent-tint', accentTint);
+    };
+
+    window.saveThemeSettings = function() {
+      if (!previewState) return;
+      
+      customPanelState.design.theme = previewState.theme;
+      customPanelState.design.contrast = previewState.contrast;
+      customPanelState.design.accent = previewState.accent;
+
+      localStorage.setItem('design_theme', previewState.theme);
+      localStorage.setItem('design_contrast', previewState.contrast);
+      localStorage.setItem('design_accent', previewState.accent);
+
+      applyGlobalTheme(previewState.theme, previewState.contrast, previewState.accent);
+      
+      showToast('Theme design system settings applied app-wide.');
+      renderSettingsCard();
+    };
+
+    window.restoreThemeDefaults = function() {
+      previewState = {
+        theme: 'light',
+        contrast: '1',
+        accent: '#12A594'
+      };
+      saveThemeSettings();
+    };
+
+    function loadSavedTheme() {
+      const savedTheme = localStorage.getItem('design_theme') || 'light';
+      const savedContrast = localStorage.getItem('design_contrast') || '1';
+      const savedAccent = localStorage.getItem('design_accent') || '#12A594';
+
+      customPanelState.design.theme = savedTheme;
+      customPanelState.design.contrast = savedContrast;
+      customPanelState.design.accent = savedAccent;
+
+      applyGlobalTheme(savedTheme, savedContrast, savedAccent);
+    }
+
+    // Initialize Page
+    loadSavedTheme();
+    updateHeaderCompany();
+    renderSidebar();
+  </script>
+</body>
+</html>
