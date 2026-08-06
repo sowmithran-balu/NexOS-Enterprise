@@ -6,6 +6,7 @@ import {
   FiLogOut, FiSearch, FiCalendar, FiCheck, FiX, FiRefreshCw, 
   FiSettings, FiChevronDown, FiMic, FiMicOff, FiSend, FiVolume2, FiInfo, FiMessageSquare
 } from 'react-icons/fi';
+import SettingsConsole from './pages/SettingsConsole';
 
 // Chart.js global reference
 declare const Chart: any;
@@ -38,6 +39,7 @@ export default function App() {
   const [activeTabId, setActiveTabId] = useState<string>('dashboard');
   const [showMastersDropdown, setShowMastersDropdown] = useState<boolean>(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showSettingsConsole, setShowSettingsConsole] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
   // Ledger Accounts State matching screenshot
@@ -286,6 +288,21 @@ export default function App() {
     }, 300);
   };
 
+  if (showSettingsConsole) {
+    return (
+      <SettingsConsole
+        companyName={companyName}
+        setCompanyName={setCompanyName}
+        fiscalYear={fiscalYear}
+        setFiscalYear={setFiscalYear}
+        planTier={planTier}
+        setPlanTier={setPlanTier}
+        onBack={() => setShowSettingsConsole(false)}
+        showToast={showToast}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#F3F5F9] text-[#161B33] font-sans">
       {/* Toast Notification Banner */}
@@ -365,7 +382,7 @@ export default function App() {
         </div>
 
         <button 
-          onClick={() => setShowSettingsModal(true)} 
+          onClick={() => setShowSettingsConsole(true)} 
           className="flex items-center gap-1 text-[#38BDF8] hover:text-white transition cursor-pointer font-semibold"
         >
           <FiSettings /> Settings
