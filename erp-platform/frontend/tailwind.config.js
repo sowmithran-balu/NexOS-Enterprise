@@ -1,10 +1,23 @@
-﻿export default {
+export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
         primary: '#60A5FA',
-        accent: '#93C5FD',
+        navy: '#10163A',
+        navy2: '#1B2456',
+        navy3: '#232C63',
+        accent: '#12A594',
+        'accent-dark': '#0B7A6E',
+        'accent-tint': '#E4F7F4',
+        warm: '#E2662F',
+        credit: '#2E9E5B',
+        bg: '#F3F5F9',
+        surface: '#FFFFFF',
+        border: '#E1E5EC',
+        text: '#161B33',
+        'text-2': '#5B6178',
+        'text-muted': '#9298AC',
       },
       boxShadow: {
         glass: '0 0 40px rgba(0, 0, 0, 0.35)',

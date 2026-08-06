@@ -1,0 +1,209 @@
+﻿Created At: 2026-07-10T03:17:24Z
+Completed At: 2026-07-10T03:17:24Z
+File Path: `file:///c:/Users/Mithran.B/ERP%20software/erp-platform/frontend/src/App.tsx`
+Total Lines: 4558
+Total Bytes: 256494
+Showing lines 1 to 200
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import React, { useState, useEffect } from 'react';
+2: import ChatAssistant from './ChatAssistant';
+3: 
+4: // API Base URL
+5: const API_URL = 'http://localhost:8080/api';
+6: 
+7: // Interfaces
+8: interface Company {
+9:   id: number;
+10:   name: string;
+11:   taxId: string;
+12:   registrationNumber: string;
+13:   currency: string;
+14:   timeZone: string;
+15:   language: string;
+16:   address: string;
+17:   active: boolean;
+18: }
+19: 
+20: interface Branch {
+21:   id: number;
+22:   companyId: number;
+23:   name: string;
+24:   code: string;
+25:   address: string;
+26:   phone: string;
+27:   email: string;
+28:   active: boolean;
+29: }
+30: 
+31: interface Department {
+32:   id: number;
+33:   companyId: number;
+34:   branchId: number;
+35:   parentDepartmentId?: number;
+36:   name: string;
+37:   code: string;
+38:   active: boolean;
+39: }
+40: 
+41: interface CostCenter {
+42:   id: number;
+43:   companyId: number;
+44:   name: string;
+45:   code: string;
+46:   description: string;
+47:   active: boolean;
+48: }
+49: 
+50: interface ProfitCenter {
+51:   id: number;
+52:   companyId: number;
+53:   name: string;
+54:   code: string;
+55:   description: string;
+56:   active: boolean;
+57: }
+58: 
+59: interface FiscalYear {
+60:   id: number;
+61:   companyId: number;
+62:   name: string;
+63:   startDate: string;
+64:   endDate: string;
+65:   status: string; // OPEN, CLOSED
+66:   active: boolean;
+67: }
+68: 
+69: interface Permission {
+70:   id: number;
+71:   module: string;
+72:   action: string;
+73:   description: string;
+74: }
+75: 
+76: interface Role {
+77:   id: number;
+78:   name: string;
+79:   description: string;
+80:   permissions: Permission[];
+81: }
+82: 
+83: interface User {
+84:   id: number;
+85:   username: string;
+86:   email: string;
+87:   firstName: string;
+88:   lastName: string;
+89:   phone: string;
+90:   mfaEnabled: boolean;
+91:   currentCompanyId?: number;
+92:   currentBranchId?: number;
+93:   departmentId?: number;
+94:   active: boolean;
+95:   roles: Role[];
+96: }
+97: 
+98: interface AuditLog {
+99:   id: number;
+100:   companyId?: number;
+101:   userId?: number;
+102:   username: string;
+103:   ipAddress: string;
+104:   action: string;
+105:   module: string;
+106:   details: string;
+107:   status: string;
+108:   timestamp: string;
+109: }
+110: 
+111: interface Product {
+112:   id: number;
+113:   companyId: number;
+114:   name: string;
+115:   code: string;
+116:   hsnCode: string;
+117:   gstRate: number;
+118:   purchasePrice: number;
+119:   sellingPriceRetail: number;
+120:   sellingPriceWholesale: number;
+121:   sellingPriceDealer: number;
+122:   unit: string;
+123:   barcode: string;
+124:   active: boolean;
+125: }
+126: 
+127: interface Godown {
+128:   id: number;
+129:   companyId: number;
+130:   name: string;
+131:   location: string;
+132:   active: boolean;
+133: }
+134: 
+135: interface ProductStock {
+136:   id: number;
+137:   companyId: number;
+138:   productId: number;
+139:   godownId: number;
+140:   batchNumber: string;
+141:   expiryDate: string;
+142:   serialNumber: string;
+143:   quantity: number;
+144:   updatedAt: string;
+145: }
+146: 
+147: interface Ledger {
+148:   id: number;
+149:   companyId: number;
+150:   name: string;
+151:   type: string; // CUSTOMER, SUPPLIER, BANK, CASH, EXPENSE, INCOME
+152:   email: string;
+153:   phone: string;
+154:   taxId: string;
+155:   openingBalance: number;
+156:   currentBalance: number;
+157:   creditLimit: number;
+158:   priceCategory: string; // RETAIL, WHOLESALE, DEALER
+159:   active: boolean;
+160: }
+161: 
+162: interface VoucherItem {
+163:   id?: number;
+164:   productId: number;
+165:   godownId: number;
+166:   batchNumber: string;
+167:   serialNumber: string;
+168:   quantity: number;
+169:   rate: number;
+170:   taxRate: number;
+171:   taxAmount: number;
+172:   discountAmount: number;
+173:   totalAmount: number;
+174: }
+175: 
+176: interface Voucher {
+177:   id: number;
+178:   companyId: number;
+179:   branchId: number;
+180:   voucherNumber: string;
+181:   type: string; // SALES, PURCHASE, PAYMENT, RECEIPT, JOURNAL
+182:   date: string;
+183:   ledgerId: number;
+184:   employeeId?: number;
+185:   profitCentreId?: number;
+186:   subTotal: number;
+187:   taxTotal: number;
+188:   discountTotal: number;
+189:   otherCharges: number;
+190:   grandTotal: number;
+191:   outstandingAmount: number;
+192:   status: string; // PENDING, PAID, PARTIAL
+193:   notes: string;
+194:   items: VoucherItem[];
+195:   createdAt?: string;
+196: }
+197: 
+198: interface CrmLead {
+199:   id: number;
+200:   companyId: number;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
+

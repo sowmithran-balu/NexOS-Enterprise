@@ -1,4 +1,4 @@
-﻿import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { FaGoogle, FaGithub, FaLinkedinIn } from 'react-icons/fa';
 
 export default function LoginCard({
@@ -7,6 +7,7 @@ export default function LoginCard({
   showPassword,
   remember,
   strength,
+  error,
   onEmailChange,
   onPasswordChange,
   onTogglePassword,
@@ -15,6 +16,11 @@ export default function LoginCard({
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-6">
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
+          {error}
+        </div>
+      )}
       <div className="space-y-3 text-center">
         <p className="text-sm uppercase tracking-[0.4em] text-slate-300/70">Welcome Back</p>
         <h2 className="text-4xl font-semibold text-white">Sign in to continue</h2>
@@ -26,10 +32,10 @@ export default function LoginCard({
           <FiMail className="text-slate-300" size={20} />
           <input
             className="w-full bg-transparent text-white outline-none placeholder:text-slate-400"
-            type="email"
+            type="text"
             value={email}
             onChange={onEmailChange}
-            placeholder="Enter your email"
+            placeholder="Enter username"
             required
             style={{ minHeight: '55px' }}
           />
