@@ -1271,6 +1271,13 @@ export default function App() {
       {/* 2. RIBBON NAVIGATION BAR */}
       <nav className="bg-[#1B2456] h-[40px] px-4 flex items-center justify-between border-b border-white/5 shrink-0 text-slate-300 font-semibold text-xs z-40">
         <div className="flex items-center h-full">
+          <div 
+            className="px-4 h-full flex items-center hover:bg-[#232C63] hover:text-white transition cursor-pointer" 
+            onClick={() => openTab('dashboard', 'Dashboard', 'dashboard')}
+          >
+            Dashboard
+          </div>
+
           <div className="relative h-full flex items-center">
             <button 
               onClick={() => setShowMastersDropdown(!showMastersDropdown)}
