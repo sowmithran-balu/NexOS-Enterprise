@@ -143,7 +143,7 @@ public class AiService {
                     .uri(URI.create("https://openrouter.ai/api/v1/chat/completions"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey.trim())
-                    .header("HTTP-Referer", "http://localhost:5173")
+                    .header("HTTP-Referer", "http://localhost:5174")
                     .header("X-Title", "Enterprise ERP")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();

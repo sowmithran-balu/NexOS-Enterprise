@@ -57,6 +57,56 @@ export default function App() {
   const [newOpeningBal, setNewOpeningBal] = useState(0);
   const [newDc, setNewDc] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
 
+  // Period & Scaling Filter State
+  const [dateRange, setDateRange] = useState('This Month');
+  const getMultiplier = () => {
+    let fyMult = 1.0;
+    if (fiscalYear === 'FY 2026-27') fyMult = 0.88;
+    else if (fiscalYear === 'FY 2025-26') fyMult = 0.75;
+    
+    let rangeMult = 1.0;
+    if (dateRange === 'This Quarter') rangeMult = 2.8;
+    else if (dateRange === 'Last 30 Days') rangeMult = 0.95;
+    else if (dateRange === 'Custom') rangeMult = 1.15;
+    
+    return fyMult * rangeMult;
+  };
+  const multiplier = getMultiplier();
+
+  // Alerts Notice Banner State
+  const [alerts, setAlerts] = useState([
+    { id: 1, type: 'error', message: 'Invoice INV-102 to Acme Corp is overdue by 5 days ($12,500.00)', category: 'Billing' },
+    { id: 2, type: 'warning', message: 'Raw Steel Sheets (Grade A) is running low: 450 units left (Reorder point: 500)', category: 'Inventory' },
+    { id: 3, type: 'info', message: 'Payroll run for August 2026 is due in 3 days', category: 'Payroll' },
+    { id: 4, type: 'info', message: 'GST Return filing for July 2026 is due by August 20th', category: 'Taxation' }
+  ]);
+
+  // functional Recent Ledger table states
+  const [ledgerSearch, setLedgerSearch] = useState('');
+  const [ledgerSortField, setLedgerSortField] = useState<'code' | 'name' | 'openingBalance' | null>(null);
+  const [ledgerSortDir, setLedgerSortDir] = useState<'asc' | 'desc'>('asc');
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerPageSize, setLedgerPageSize] = useState(5);
+
+  // Quick Actions modal states
+  const [showQuickInvoiceModal, setShowQuickInvoiceModal] = useState(false);
+  const [showQuickPaymentModal, setShowQuickPaymentModal] = useState(false);
+  const [showQuickExpenseModal, setShowQuickExpenseModal] = useState(false);
+
+  // Quick Action Form states
+  const [quickInvCustomer, setQuickInvCustomer] = useState('Acme Corp');
+  const [quickInvAmt, setQuickInvAmt] = useState(12500);
+  const [quickPayType, setQuickPayType] = useState<'Receipt' | 'Payment'>('Receipt');
+  const [quickPayAmt, setQuickPayAmt] = useState(5000);
+  const [quickPayDesc, setQuickPayDesc] = useState('Acme Invoice Settlement');
+  const [quickExpCategory, setQuickExpCategory] = useState('Office Expense A/C');
+  const [quickExpAmt, setQuickExpAmt] = useState(450);
+  const [quickExpDesc, setQuickExpDesc] = useState('Office Refreshments & Stationery');
+
+  // KPI Drawer State
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerType, setDrawerType] = useState<'ledgers' | 'sales' | 'expenses' | 'cash' | null>(null);
+
   // Other dynamic master views states to make all keys functional
   const [products, setProducts] = useState([
     { id: 'PD-101', name: 'Raw Steel Sheets (Grade A)', category: 'Raw Materials', price: 280.00, stock: 450 },
@@ -157,6 +207,78 @@ export default function App() {
     showToast(`Created ledger account ${created.code} successfully!`);
   };
 
+  // Recent Ledger Sort Handler
+  const handleSortLedger = (field: 'code' | 'name' | 'openingBalance') => {
+    if (ledgerSortField === field) {
+      setLedgerSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setLedgerSortField(field);
+      setLedgerSortDir('asc');
+    }
+  };
+
+  // Export / Print Handler
+  const handlePrintDashboard = () => {
+    window.print();
+  };
+
+  // Quick Action routing stubs
+  const handleQuickAction = (action: 'invoice' | 'ledger' | 'payment' | 'expense') => {
+    if (action === 'invoice') setShowQuickInvoiceModal(true);
+    else if (action === 'ledger') setShowNewLedgerModal(true);
+    else if (action === 'payment') setShowQuickPaymentModal(true);
+    else if (action === 'expense') setShowQuickExpenseModal(true);
+  };
+
+  // Quick Action form submissions
+  const handleCreateQuickInvoice = (e: React.FormEvent) => {
+    e.preventDefault();
+    const invoiceTx = {
+      id: `VT-${Date.now().toString().slice(-3)}`,
+      date: new Date().toISOString().split('T')[0],
+      desc: `Invoice to ${quickInvCustomer}`,
+      deb: 'Silicon Valley Bank',
+      cred: 'Acme Corp Sales A/C',
+      amt: Number(quickInvAmt),
+      type: 'Receipt' as const
+    };
+    setTransactions([invoiceTx, ...transactions]);
+    setShowQuickInvoiceModal(false);
+    showToast(`Invoice for $${quickInvAmt.toLocaleString()} generated & posted!`, 'success');
+  };
+
+  const handleCreateQuickPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    const payTx = {
+      id: `VT-${Date.now().toString().slice(-3)}`,
+      date: new Date().toISOString().split('T')[0],
+      desc: quickPayDesc,
+      deb: quickPayType === 'Payment' ? 'Office Expense A/C' : 'Silicon Valley Bank',
+      cred: quickPayType === 'Payment' ? 'Silicon Valley Bank' : 'Acme Corp Sales A/C',
+      amt: Number(quickPayAmt),
+      type: quickPayType
+    };
+    setTransactions([payTx, ...transactions]);
+    setShowQuickPaymentModal(false);
+    showToast(`Payment Voucher of $${quickPayAmt.toLocaleString()} posted!`, 'success');
+  };
+
+  const handleCreateQuickExpense = (e: React.FormEvent) => {
+    e.preventDefault();
+    const expTx = {
+      id: `VT-${Date.now().toString().slice(-3)}`,
+      date: new Date().toISOString().split('T')[0],
+      desc: quickExpDesc,
+      deb: quickExpCategory,
+      cred: 'Silicon Valley Bank',
+      amt: Number(quickExpAmt),
+      type: 'Payment' as const
+    };
+    setTransactions([expTx, ...transactions]);
+    setShowQuickExpenseModal(false);
+    showToast(`Expense of $${quickExpAmt} logged successfully!`, 'success');
+  };
+
   // Initialize Dual Bar Charts on Dashboard view
   useEffect(() => {
     if (currentActiveTab?.view === 'dashboard' && typeof Chart !== 'undefined') {
@@ -172,7 +294,7 @@ export default function App() {
               datasets: [
                 {
                   label: 'Sales',
-                  data: [12500, 15300, 18200, 17000, 21400, 24850],
+                  data: [12500, 15300, 18200, 17000, 21400, 24850].map(v => v * multiplier),
                   backgroundColor: '#12A594',
                   borderRadius: 4,
                   barPercentage: 0.6,
@@ -180,7 +302,7 @@ export default function App() {
                 },
                 {
                   label: 'Expenses',
-                  data: [8200, 9100, 11400, 10200, 11800, 14000],
+                  data: [8200, 9100, 11400, 10200, 11800, 14000].map(v => v * multiplier),
                   backgroundColor: '#E2662F',
                   borderRadius: 4,
                   barPercentage: 0.6,
@@ -244,21 +366,21 @@ export default function App() {
               datasets: [
                 {
                   label: 'Purchases',
-                  data: [12500, 0, 0],
+                  data: [12500, 0, 0].map(v => v * multiplier),
                   backgroundColor: '#232C63',
                   borderRadius: 4,
                   barThickness: 36
                 },
                 {
                   label: 'Direct',
-                  data: [0, 4800, 0],
+                  data: [0, 4800, 0].map(v => v * multiplier),
                   backgroundColor: '#E2662F',
                   borderRadius: 4,
                   barThickness: 36
                 },
                 {
                   label: 'Indirect',
-                  data: [0, 0, 6700],
+                  data: [0, 0, 6700].map(v => v * multiplier),
                   backgroundColor: '#EAB308',
                   borderRadius: 4,
                   barThickness: 36
@@ -307,7 +429,7 @@ export default function App() {
         if (chart2) chart2.destroy();
       };
     }
-  }, [currentActiveTab?.view]);
+  }, [currentActiveTab?.view, multiplier]);
 
   // Initialize P&L Chart on Profit & Loss view
   useEffect(() => {
@@ -379,44 +501,235 @@ export default function App() {
 
   const renderTabContent = () => {
     switch (currentActiveTab.view) {
-      case 'dashboard':
+      case 'dashboard': {
+        // Calculate dynamic values for KPIs
+        const scaledSales = (24850 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const scaledExpenses = (11210 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const scaledCash = (38400 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        // Filter, Sort, Paginate Ledgers
+        const filteredLedgers = ledgers
+          .filter(l => 
+            l.name.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
+            l.code.toLowerCase().includes(ledgerSearch.toLowerCase()) ||
+            l.group.toLowerCase().includes(ledgerSearch.toLowerCase())
+          );
+
+        const sortedLedgers = [...filteredLedgers].sort((a, b) => {
+          if (!ledgerSortField) return 0;
+          
+          let aVal = a[ledgerSortField];
+          let bVal = b[ledgerSortField];
+          
+          if (typeof aVal === 'string') {
+            aVal = aVal.toLowerCase();
+            bVal = (bVal as string).toLowerCase();
+          }
+          
+          if (aVal < bVal) return ledgerSortDir === 'asc' ? -1 : 1;
+          if (aVal > bVal) return ledgerSortDir === 'asc' ? 1 : -1;
+          return 0;
+        });
+
+        const paginatedLedgers = sortedLedgers.slice(
+          (ledgerPage - 1) * ledgerPageSize,
+          ledgerPage * ledgerPageSize
+        );
+
+        const totalPages = Math.ceil(sortedLedgers.length / ledgerPageSize);
+
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* ROW 1: 4 METRIC CARDS MATCHING EXACT SCREENSHOT */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Card 1: LEDGER ACCOUNTS */}
-              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px]">
-                <div className="text-[11px] font-bold uppercase text-[#5B6178] tracking-wider">LEDGER ACCOUNTS</div>
-                <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">{ledgers.length}</div>
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2E9E5B]">
-                  <span className="w-2 h-2 rounded-full bg-[#2E9E5B]"></span> + Active accounts
+            {/* Filter controls row */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white border border-slate-200 rounded-lg p-4 shadow-sm print:hidden">
+              <div className="flex flex-wrap items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <FiCalendar className="text-slate-400 text-sm" />
+                  <span className="text-[10px] font-extrabold text-[#5B6178] uppercase tracking-wider">Fiscal Period:</span>
+                  <select 
+                    value={fiscalYear} 
+                    onChange={(e) => setFiscalYear(e.target.value)} 
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-bold text-[#161B33] bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#12A594]"
+                  >
+                    <option value="FY 2027-28">FY 2027-28</option>
+                    <option value="FY 2026-27">FY 2026-27</option>
+                    <option value="FY 2025-26">FY 2025-26</option>
+                  </select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-extrabold text-[#5B6178] uppercase tracking-wider">Range:</span>
+                  <select 
+                    value={dateRange} 
+                    onChange={(e) => setDateRange(e.target.value)} 
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-bold text-[#161B33] bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#12A594]"
+                  >
+                    <option value="This Month">This Month</option>
+                    <option value="This Quarter">This Quarter</option>
+                    <option value="Last 30 Days">Last 30 Days</option>
+                    <option value="Custom">Custom Range</option>
+                  </select>
+                </div>
+              </div>
+              
+              <button 
+                onClick={handlePrintDashboard}
+                className="border-[1.5px] border-[#10163A] hover:bg-[#10163A]/5 text-[#10163A] px-3.5 py-1.5 rounded-md text-xs font-extrabold flex items-center gap-1.5 transition select-none"
+              >
+                <FiFileText /> Export PDF / Print
+              </button>
+            </div>
+
+            {/* Alerts notice banner strip */}
+            {alerts.length > 0 && (
+              <div className="space-y-2 print:hidden">
+                {alerts.map(alert => (
+                  <div 
+                    key={alert.id} 
+                    className={`border-l-4 p-3 rounded-r-md bg-white border border-slate-200 border-l-slate-200 shadow-sm flex items-center justify-between text-xs transition duration-200 ${
+                      alert.type === 'error' 
+                        ? 'border-l-[#E2662F]' 
+                        : alert.type === 'warning' 
+                        ? 'border-l-[#EAB308]' 
+                        : 'border-l-[#2563EB]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase font-mono ${
+                        alert.type === 'error' 
+                          ? 'bg-[#FFF3EC] text-[#E2662F] border border-[#E2662F]/20' 
+                          : alert.type === 'warning' 
+                          ? 'bg-[#FEFCE8] text-[#854D0E] border border-[#EAB308]/20' 
+                          : 'bg-[#EFF6FF] text-[#1E40AF] border border-[#2563EB]/20'
+                      }`}>
+                        {alert.category}
+                      </span>
+                      <span className="font-semibold text-slate-700">{alert.message}</span>
+                    </div>
+                    <button 
+                      onClick={() => setAlerts(alerts.filter(a => a.id !== alert.id))}
+                      className="text-slate-400 hover:text-slate-700 transition font-extrabold text-sm ml-2 px-1"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ROW 1: 4 METRIC CARDS + QUICK ACTIONS GRID */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+              <div className="lg:col-span-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Card 1: LEDGER ACCOUNTS */}
+                <div 
+                  onClick={() => { setDrawerType('ledgers'); setDrawerOpen(true); }}
+                  className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px] cursor-pointer hover:border-[#12A594] hover:shadow-md transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase text-[#5B6178] tracking-wider">LEDGER ACCOUNTS</div>
+                    <FiInfo className="text-slate-400 opacity-0 group-hover:opacity-100 transition text-xs" />
+                  </div>
+                  <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">{ledgers.length}</div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2E9E5B]">
+                    <span className="w-2 h-2 rounded-full bg-[#2E9E5B]"></span> + Active accounts
+                  </div>
+                </div>
+
+                {/* Card 2: SALES THIS MONTH */}
+                <div 
+                  onClick={() => { setDrawerType('sales'); setDrawerOpen(true); }}
+                  className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px] cursor-pointer hover:border-[#12A594] hover:shadow-md transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase text-[#5B6178] tracking-wider">SALES THIS MONTH</div>
+                    <FiInfo className="text-slate-400 opacity-0 group-hover:opacity-100 transition text-xs" />
+                  </div>
+                  <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">${scaledSales}</div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
+                    <FiTrendingUp /> +14.2% vs last month
+                  </div>
+                </div>
+
+                {/* Card 3: EXPENSES THIS MONTH */}
+                <div 
+                  onClick={() => { setDrawerType('expenses'); setDrawerOpen(true); }}
+                  className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px] cursor-pointer hover:border-[#12A594] hover:shadow-md transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase text-[#5B6178] tracking-wider">EXPENSES THIS MONTH</div>
+                    <FiInfo className="text-slate-400 opacity-0 group-hover:opacity-100 transition text-xs" />
+                  </div>
+                  <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">${scaledExpenses}</div>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
+                    <FiTrendingDown /> -2.4% vs last month
+                  </div>
+                </div>
+
+                {/* Card 4: CASH IN HAND */}
+                <div 
+                  onClick={() => { setDrawerType('cash'); setDrawerOpen(true); }}
+                  className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px] cursor-pointer hover:border-[#12A594] hover:shadow-md transition group"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase text-[#5B6178] tracking-wider">CASH IN HAND</div>
+                    <FiInfo className="text-slate-400 opacity-0 group-hover:opacity-100 transition text-xs" />
+                  </div>
+                  <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">${scaledCash}</div>
+                  <div className="flex items-between justify-between w-full mt-1">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
+                      <FiTrendingUp /> +5.1% vs last week
+                    </div>
+                    {/* Sparkline SVG */}
+                    <svg className="w-14 h-5 overflow-visible print:hidden" viewBox="0 0 60 20">
+                      <path 
+                        d="M 0 15 L 10 12 L 20 18 L 30 10 L 40 8 L 50 14 L 60 4" 
+                        fill="none" 
+                        stroke="#2E9E5B" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                      />
+                      <path 
+                        d="M 0 15 L 10 12 L 20 18 L 30 10 L 40 8 L 50 14 L 60 4 L 60 20 L 0 20 Z" 
+                        fill="rgba(46, 158, 91, 0.1)" 
+                      />
+                    </svg>
+                  </div>
                 </div>
               </div>
 
-              {/* Card 2: SALES THIS MONTH */}
-              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px]">
-                <div className="text-[11px] font-bold uppercase text-[#5B6178] tracking-wider">SALES THIS MONTH</div>
-                <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">$24,850.00</div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
-                  <FiTrendingUp /> +14.2% vs last month
-                </div>
-              </div>
-
-              {/* Card 3: EXPENSES THIS MONTH */}
-              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px]">
-                <div className="text-[11px] font-bold uppercase text-[#5B6178] tracking-wider">EXPENSES THIS MONTH</div>
-                <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">$11,210.00</div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
-                  <FiTrendingDown /> -2.4% vs last month
-                </div>
-              </div>
-
-              {/* Card 4: CASH IN HAND */}
-              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 flex flex-col justify-between shadow-sm min-h-[115px]">
-                <div className="text-[11px] font-bold uppercase text-[#5B6178] tracking-wider">CASH IN HAND</div>
-                <div className="font-extrabold text-3xl font-manrope text-[#161B33] my-1">$38,400.00</div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-[#2E9E5B]">
-                  <FiTrendingUp /> +5.1% vs last week
+              {/* Quick Actions (1 column) */}
+              <div className="bg-[#10163A] border-[1.5px] border-[#161B33] rounded-lg p-4 flex flex-col shadow-sm text-white print:hidden justify-between">
+                <div className="text-[9px] font-extrabold uppercase text-slate-400 tracking-wider mb-2.5">QUICK ACTIONS</div>
+                <div className="grid grid-cols-2 gap-2 flex-1 items-stretch">
+                  <button 
+                    onClick={() => handleQuickAction('invoice')}
+                    className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-md p-2 transition text-center select-none"
+                  >
+                    <FiPlus className="text-[#12A594] text-lg mb-1" />
+                    <span className="text-[9px] font-extrabold tracking-tight">New Invoice</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('ledger')}
+                    className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-md p-2 transition text-center select-none"
+                  >
+                    <FiBookOpen className="text-[#38BDF8] text-lg mb-1" />
+                    <span className="text-[9px] font-extrabold tracking-tight">New Ledger</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('payment')}
+                    className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-md p-2 transition text-center select-none"
+                  >
+                    <FiDollarSign className="text-emerald-400 text-lg mb-1" />
+                    <span className="text-[9px] font-extrabold tracking-tight">Record Pay</span>
+                  </button>
+                  <button 
+                    onClick={() => handleQuickAction('expense')}
+                    className="flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 border border-white/10 rounded-md p-2 transition text-center select-none"
+                  >
+                    <FiTrendingDown className="text-[#E2662F] text-lg mb-1" />
+                    <span className="text-[9px] font-extrabold tracking-tight">Add Expense</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -446,29 +759,65 @@ export default function App() {
 
             {/* ROW 3: TABLE CARD - Recent Ledger Accounts */}
             <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-extrabold text-base font-manrope text-[#161B33]">Recent Ledger Accounts</h2>
-                <button 
-                  onClick={() => setShowNewLedgerModal(true)}
-                  className="border-[1.5px] border-[#2563EB] text-[#2563EB] bg-white hover:bg-blue-50 px-3 py-1.5 rounded-md text-xs font-extrabold flex items-center gap-1 transition"
-                >
-                  + New account
-                </button>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-extrabold text-base font-manrope text-[#161B33]">Recent Ledger Accounts</h2>
+                  <p className="text-[10px] text-slate-500 font-medium">Manage and audit core ledger postings</p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3 print:hidden">
+                  {/* Search Bar */}
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="Search accounts..." 
+                      value={ledgerSearch}
+                      onChange={(e) => {
+                        setLedgerSearch(e.target.value);
+                        setLedgerPage(1);
+                      }}
+                      className="border border-slate-300 rounded px-2.5 py-1 text-xs text-[#161B33] bg-slate-50 focus:outline-none focus:ring-1 focus:ring-[#12A594] pl-7 w-44 sm:w-56"
+                    />
+                    <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+                  </div>
+
+                  <button 
+                    onClick={() => setShowNewLedgerModal(true)}
+                    className="border-[1.5px] border-[#2563EB] text-[#2563EB] bg-white hover:bg-blue-50 px-3 py-1.5 rounded-md text-xs font-extrabold flex items-center gap-1 transition"
+                  >
+                    + New account
+                  </button>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-2">CODE</th>
-                      <th className="py-3 px-2">ACCOUNT NAME</th>
+                    <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider select-none">
+                      <th 
+                        className="py-3 px-2 cursor-pointer hover:text-[#161B33] transition"
+                        onClick={() => handleSortLedger('code')}
+                      >
+                        CODE {ledgerSortField === 'code' && (ledgerSortDir === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
+                      <th 
+                        className="py-3 px-2 cursor-pointer hover:text-[#161B33] transition"
+                        onClick={() => handleSortLedger('name')}
+                      >
+                        ACCOUNT NAME {ledgerSortField === 'name' && (ledgerSortDir === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
                       <th className="py-3 px-2">GROUP</th>
-                      <th className="py-3 px-2">OPENING BALANCE</th>
+                      <th 
+                        className="py-3 px-2 cursor-pointer hover:text-[#161B33] transition text-right"
+                        onClick={() => handleSortLedger('openingBalance')}
+                      >
+                        OPENING BALANCE {ledgerSortField === 'openingBalance' && (ledgerSortDir === 'asc' ? ' ▲' : ' ▼')}
+                      </th>
                       <th className="py-3 px-2 text-right">D/C</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E1E5EC] text-[#161B33]">
-                    {ledgers.slice(0, 5).map(l => (
+                    {paginatedLedgers.map(l => (
                       <tr key={l.id} className="hover:bg-slate-50 transition">
                         <td className="py-3 px-2">
                           <span className="bg-[#10163A] text-white px-2.5 py-1 rounded font-mono font-bold text-[11px] tracking-wider">
@@ -477,7 +826,7 @@ export default function App() {
                         </td>
                         <td className="py-3 px-2 font-bold text-sm text-[#161B33]">{l.name}</td>
                         <td className="py-3 px-2 font-semibold text-slate-600">{l.group}</td>
-                        <td className="py-3 px-2 font-bold font-mono text-sm">${l.openingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3 px-2 font-bold font-mono text-sm text-right">${l.openingBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td className="py-3 px-2 text-right">
                           {l.dc === 'DEBIT' ? (
                             <span className="bg-[#FFF3EC] text-[#E2662F] border border-[#E2662F]/30 px-2.5 py-0.5 rounded text-[10px] font-extrabold font-mono uppercase">
@@ -491,12 +840,46 @@ export default function App() {
                         </td>
                       </tr>
                     ))}
+                    {paginatedLedgers.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400 font-semibold">
+                          No ledger accounts found matching your filters.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t border-[#E1E5EC] pt-4 text-xs font-semibold text-slate-500 print:hidden select-none">
+                  <div>
+                    Showing {Math.min(filteredLedgers.length, (ledgerPage - 1) * ledgerPageSize + 1)} to {Math.min(filteredLedgers.length, ledgerPage * ledgerPageSize)} of {filteredLedgers.length} records
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setLedgerPage(prev => Math.max(1, prev - 1))}
+                      disabled={ledgerPage === 1}
+                      className="px-2.5 py-1 border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition"
+                    >
+                      Previous
+                    </button>
+                    <span className="px-2.5">Page {ledgerPage} of {totalPages}</span>
+                    <button 
+                      onClick={() => setLedgerPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={ledgerPage === totalPages}
+                      className="px-2.5 py-1 border border-slate-300 rounded hover:bg-slate-100 disabled:opacity-40 disabled:pointer-events-none transition"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </main>
         );
+      }
 
       case 'accounts_list':
         return (
@@ -1550,6 +1933,324 @@ export default function App() {
             <div className="flex justify-end gap-2 border-t pt-3">
               <button onClick={() => window.print()} className="border px-4 py-1.5 rounded bg-slate-50 hover:bg-slate-100 text-xs font-bold">Print</button>
               <button onClick={() => setActiveReport(null)} className="bg-[#12A594] text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-[#0B7A6E]">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK INVOICE MODAL */}
+      {showQuickInvoiceModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                <FiPlus className="text-[#12A594]" /> New Quick Invoice
+              </h3>
+              <button onClick={() => setShowQuickInvoiceModal(false)} className="text-slate-400 hover:text-slate-700">
+                <FiX />
+              </button>
+            </div>
+            <form onSubmit={handleCreateQuickInvoice} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Customer Name</label>
+                <select 
+                  value={quickInvCustomer} 
+                  onChange={e => setQuickInvCustomer(e.target.value)} 
+                  className="w-full mt-1 p-2 border rounded font-semibold bg-white"
+                >
+                  <option value="Acme Corp">Acme Corp</option>
+                  <option value="ByteDance Inc">ByteDance Inc</option>
+                  <option value="Oracle Cloud Corp">Oracle Cloud Corp</option>
+                  <option value="Tesla Supply Chain">Tesla Supply Chain</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Invoice Amount ($)</label>
+                <input 
+                  type="number" 
+                  value={quickInvAmt} 
+                  onChange={e => setQuickInvAmt(Number(e.target.value))} 
+                  className="w-full mt-1 p-2 border rounded font-mono font-bold outline-none focus:border-[#12A594]" 
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-bold transition">
+                  Create Invoice
+                </button>
+                <button type="button" onClick={() => setShowQuickInvoiceModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-semibold transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK RECORD PAYMENT MODAL */}
+      {showQuickPaymentModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                <FiDollarSign className="text-emerald-500" /> Record Quick Payment
+              </h3>
+              <button onClick={() => setShowQuickPaymentModal(false)} className="text-slate-400 hover:text-slate-700">
+                <FiX />
+              </button>
+            </div>
+            <form onSubmit={handleCreateQuickPayment} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Voucher Type</label>
+                  <select 
+                    value={quickPayType} 
+                    onChange={e => setQuickPayType(e.target.value as 'Receipt' | 'Payment')} 
+                    className="w-full mt-1 p-2 border rounded font-bold bg-white"
+                  >
+                    <option value="Receipt">Receipt (Inflow)</option>
+                    <option value="Payment">Payment (Outflow)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Amount ($)</label>
+                  <input 
+                    type="number" 
+                    value={quickPayAmt} 
+                    onChange={e => setQuickPayAmt(Number(e.target.value))} 
+                    className="w-full mt-1 p-2 border rounded font-mono font-bold outline-none focus:border-[#12A594]" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Description</label>
+                <input 
+                  type="text" 
+                  value={quickPayDesc} 
+                  onChange={e => setQuickPayDesc(e.target.value)} 
+                  placeholder="e.g. Acme Corp invoice settlement"
+                  className="w-full mt-1 p-2 border rounded font-semibold outline-none focus:border-[#12A594]" 
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-bold transition">
+                  Post Voucher
+                </button>
+                <button type="button" onClick={() => setShowQuickPaymentModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-semibold transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK ADD EXPENSE MODAL */}
+      {showQuickExpenseModal && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                <FiTrendingDown className="text-[#E2662F]" /> Log Quick Expense
+              </h3>
+              <button onClick={() => setShowQuickExpenseModal(false)} className="text-slate-400 hover:text-slate-700">
+                <FiX />
+              </button>
+            </div>
+            <form onSubmit={handleCreateQuickExpense} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Expense Ledger</label>
+                  <select 
+                    value={quickExpCategory} 
+                    onChange={e => setQuickExpCategory(e.target.value)} 
+                    className="w-full mt-1 p-2 border rounded font-semibold bg-white"
+                  >
+                    <option value="Office Expense A/C">Office Expense A/C</option>
+                    <option value="Rent & Rates A/C">Rent & Rates A/C</option>
+                    <option value="Electricity & Power A/C">Electricity & Power A/C</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Amount ($)</label>
+                  <input 
+                    type="number" 
+                    value={quickExpAmt} 
+                    onChange={e => setQuickExpAmt(Number(e.target.value))} 
+                    className="w-full mt-1 p-2 border rounded font-mono font-bold outline-none focus:border-[#12A594]" 
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Description</label>
+                <input 
+                  type="text" 
+                  value={quickExpDesc} 
+                  onChange={e => setQuickExpDesc(e.target.value)} 
+                  placeholder="e.g. Broadband internet bill"
+                  className="w-full mt-1 p-2 border rounded font-semibold outline-none focus:border-[#12A594]" 
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-bold transition">
+                  Save Expense
+                </button>
+                <button type="button" onClick={() => setShowQuickExpenseModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-semibold transition">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* KPI DRILL-DOWN SLIDE-OVER DRAWER */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-[9999] overflow-hidden">
+          {/* Overlay backdrop */}
+          <div 
+            onClick={() => setDrawerOpen(false)}
+            className="absolute inset-0 bg-[#10163A]/40 backdrop-blur-sm transition-opacity duration-300"
+          ></div>
+          
+          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between animate-slide-in">
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-[#10163A] text-white">
+                <div>
+                  <h3 className="font-extrabold text-base uppercase tracking-wider font-manrope">
+                    {drawerType === 'ledgers' && 'Ledger Accounts'}
+                    {drawerType === 'sales' && 'Sales Analysis'}
+                    {drawerType === 'expenses' && 'Expenses Analysis'}
+                    {drawerType === 'cash' && 'Cash Allocations'}
+                  </h3>
+                  <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wide">Detailed dashboard breakdown</p>
+                </div>
+                <button 
+                  onClick={() => setDrawerOpen(false)}
+                  className="text-white hover:text-rose-400 font-extrabold text-lg p-1 transition"
+                >
+                  <FiX />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs">
+                {drawerType === 'ledgers' && (
+                  <div className="space-y-4">
+                    <p className="text-slate-500 font-semibold leading-relaxed">
+                      Below is the system group-wise breakdown of all corporate ledger accounts:
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Bank Accounts</span>
+                        <span className="bg-[#EFF6FF] text-[#1E40AF] px-2 py-0.5 rounded font-mono font-bold text-[10px]">
+                          {ledgers.filter(l => l.group === 'Bank Accounts').length} Accounts
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Sales Accounts</span>
+                        <span className="bg-[#EAF5EE] text-[#2E9E5B] px-2 py-0.5 rounded font-mono font-bold text-[10px]">
+                          {ledgers.filter(l => l.group === 'Sales Account').length} Accounts
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Indirect Expenses</span>
+                        <span className="bg-[#FEFCE8] text-[#854D0E] px-2 py-0.5 rounded font-mono font-bold text-[10px]">
+                          {ledgers.filter(l => l.group === 'Indirect Expenses').length} Accounts
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {drawerType === 'sales' && (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 uppercase text-[10px] tracking-wider mb-2">Top Customers this Month</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                          <span className="font-bold text-slate-700">Acme Corp</span>
+                          <span className="font-bold font-mono text-slate-800">${(12500 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                          <span className="font-bold text-slate-700">ByteDance Inc</span>
+                          <span className="font-bold font-mono text-slate-800">${(8300 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                          <span className="font-bold text-slate-700">Tesla Supply Chain</span>
+                          <span className="font-bold font-mono text-slate-800">${(4050 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 uppercase text-[10px] tracking-wider mb-2">Top Products by Revenue</h4>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                          <span className="font-bold text-slate-700">Raw Steel Sheets (Grade A)</span>
+                          <span className="text-teal-600 font-bold">120 units sold</span>
+                        </div>
+                        <div className="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg border">
+                          <span className="font-bold text-slate-700">Copper Wires (0.5mm)</span>
+                          <span className="text-teal-600 font-bold">850 units sold</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {drawerType === 'expenses' && (
+                  <div className="space-y-4">
+                    <p className="text-slate-500 font-semibold leading-relaxed">
+                      Itemized breakdown of corporate outflow accounts:
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Material Purchases</span>
+                        <span className="font-bold font-mono text-slate-800">${(8210 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Direct Cost (Freight & Rent)</span>
+                        <span className="font-bold font-mono text-slate-800">${(2400 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Indirect Cost (Stationery & Food)</span>
+                        <span className="font-bold font-mono text-slate-800">${(600 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {drawerType === 'cash' && (
+                  <div className="space-y-4">
+                    <p className="text-slate-500 font-semibold leading-relaxed">
+                      Liquid cash distribution across registered corporate asset accounts:
+                    </p>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Silicon Valley Bank (SVB A/C)</span>
+                        <span className="font-bold font-mono text-[#2E9E5B]">${(35000 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2 border-slate-100">
+                        <span className="font-bold text-slate-700">Petty Cash Register</span>
+                        <span className="font-bold font-mono text-[#2E9E5B]">${(3400 * multiplier).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
+                <button 
+                  onClick={() => setDrawerOpen(false)}
+                  className="w-full bg-[#10163A] hover:bg-[#1B2456] text-white py-2 rounded text-xs font-bold transition select-none"
+                >
+                  Close Panel
+                </button>
+              </div>
             </div>
           </div>
         </div>

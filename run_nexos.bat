@@ -18,7 +18,7 @@ echo Waiting for services to initialize...
 timeout /t 6 >nul
 
 echo Opening browser to dashboard...
-start http://localhost:5173/
+start http://localhost:5174/
 
 echo.
 echo ===================================================
