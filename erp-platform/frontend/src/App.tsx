@@ -4,7 +4,8 @@ import {
   FiDollarSign, FiTrendingUp, FiTrendingDown, FiBookOpen, FiBriefcase, 
   FiLayers, FiClock, FiFileText, FiPieChart, FiDatabase, 
   FiLogOut, FiSearch, FiCalendar, FiCheck, FiX, FiRefreshCw, 
-  FiSettings, FiChevronDown, FiMic, FiMicOff, FiSend, FiVolume2, FiInfo, FiMessageSquare
+  FiSettings, FiChevronDown, FiMic, FiMicOff, FiSend, FiVolume2, FiInfo, FiMessageSquare,
+  FiShare
 } from 'react-icons/fi';
 import SettingsConsole from './pages/SettingsConsole';
 
@@ -81,6 +82,26 @@ interface ReconRecord {
   type: 'Withdrawal' | 'Deposit';
   matchedVoucherId?: string;
   status: 'Matched' | 'Unmatched';
+}
+
+interface ERPDocument {
+  documentId: string;
+  fileName: string;
+  category: 'Compliance' | 'Bills & Receipts' | 'Backups' | 'Contracts' | 'HR' | 'Financials';
+  fileType: string;
+  fileSize: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Archived';
+  expiryDate?: string;
+  linkedModule?: 'Sales' | 'Purchase' | 'Payroll' | 'HR' | 'System';
+  linkedEntityId?: string;
+  department_id?: string;
+  isConfidential: boolean;
+  lockStatus?: { lockedBy: string; lockedAt: string };
+  versions: { versionId: string; versionNumber: number; fileUrl: string; uploadedBy: string; uploadedAt: string; changeNotes: string }[];
+  comments: { author: string; text: string; timestamp: string }[];
+  accessLogs: { action: string; user: string; timestamp: string }[];
 }
 
 interface PayrollEmployee {
@@ -706,10 +727,114 @@ export default function App() {
     { employeeId: 'EMP-03', presentDays: 22, lopDays: 0, overtimeHours: 0 }
   ]);
 
-  const [documents, setDocuments] = useState([
-    { name: 'audit_report_q2_draft.pdf', cat: 'Compliance', size: '1.4 MB', date: '2026-07-12', user: 'admin' },
-    { name: 'office_rent_agreement.pdf', cat: 'Bills & Receipts', size: '2.1 MB', date: '2026-07-09', user: 'admin' },
-    { name: 'database_restore_point.bak', cat: 'Backups', size: '241.8 MB', date: '2026-07-09', user: 'system' }
+  // DMS active sub-tab state
+  const [activeDmsTab, setActiveDmsTab] = useState<'explorer' | 'approvals' | 'bundles' | 'quota'>('explorer');
+  const [selectedDmsDoc, setSelectedDmsDoc] = useState<ERPDocument | null>(null);
+
+  // DMS search and filter states
+  const [dmsSearchQuery, setDmsSearchQuery] = useState('');
+  const [dmsCategoryFilter, setDmsCategoryFilter] = useState('ALL');
+  const [dmsTagFilter, setDmsTagFilter] = useState('ALL');
+  const [dmsSelectedFolder, setDmsSelectedFolder] = useState<'all' | 'finance' | 'hr' | 'compliance' | 'backups'>('all');
+
+  // DMS Modal and Form states
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [newDocName, setNewDocName] = useState('');
+  const [newDocCat, setNewDocCat] = useState<'Compliance' | 'Bills & Receipts' | 'Backups' | 'Contracts' | 'HR' | 'Financials'>('Compliance');
+  const [newDocSize, setNewDocSize] = useState('1.5 MB');
+  const [newDocConfidential, setNewDocConfidential] = useState(false);
+  const [newDocExpiry, setNewDocExpiry] = useState('');
+
+  // DMS Share Link states
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareDocId, setShareDocId] = useState<string | null>(null);
+  const [shareExpires, setShareExpires] = useState('2026-08-15');
+  const [shareLinkResult, setShareLinkResult] = useState('');
+
+  // DMS Annotation/Comment input
+  const [dmsCommentInput, setDmsCommentInput] = useState('');
+
+  // 1. Seeded ERP Documents
+  const [documents, setDocuments] = useState<ERPDocument[]>([
+    {
+      documentId: 'DOC-001',
+      fileName: 'audit_report_q2_draft.pdf',
+      category: 'Compliance',
+      fileType: 'pdf',
+      fileSize: '1.4 MB',
+      uploadedBy: 'admin',
+      uploadedAt: '2026-07-12T10:00:00Z',
+      status: 'Pending Approval',
+      linkedModule: 'System',
+      isConfidential: false,
+      lockStatus: { lockedBy: 'Sarah Jenkins', lockedAt: '2026-07-12T10:15:00Z' },
+      versions: [
+        { versionId: 'V-001', versionNumber: 1, fileUrl: '/dms/audit_report_q2_v1.pdf', uploadedBy: 'admin', uploadedAt: '2026-07-12T10:00:00Z', changeNotes: 'Initial draft upload' },
+        { versionId: 'V-002', versionNumber: 2, fileUrl: '/dms/audit_report_q2_v2.pdf', uploadedBy: 'Sarah Jenkins', uploadedAt: '2026-07-12T10:30:00Z', changeNotes: 'Fixed depreciation tables on section 3' }
+      ],
+      comments: [
+        { author: 'admin', text: 'Sarah, please check the depreciation splits on page 4.', timestamp: '2026-07-12T10:10:00Z' },
+        { author: 'Sarah Jenkins', text: 'Checked and fixed in v2. Swapped JV ledger reference codes.', timestamp: '2026-07-12T10:29:00Z' }
+      ],
+      accessLogs: [
+        { action: 'Viewed', user: 'admin', timestamp: '2026-07-12T10:05:00Z' },
+        { action: 'Downloaded', user: 'Sarah Jenkins', timestamp: '2026-07-12T10:15:00Z' }
+      ]
+    },
+    {
+      documentId: 'DOC-002',
+      fileName: 'office_rent_agreement.pdf',
+      category: 'Contracts',
+      fileType: 'pdf',
+      fileSize: '2.1 MB',
+      uploadedBy: 'admin',
+      uploadedAt: '2026-07-09T09:00:00Z',
+      status: 'Approved',
+      expiryDate: '2026-08-25', // Expiring this month
+      linkedModule: 'System',
+      isConfidential: true,
+      versions: [
+        { versionId: 'V-003', versionNumber: 1, fileUrl: '/dms/office_rent_v1.pdf', uploadedBy: 'admin', uploadedAt: '2026-07-09T09:00:00Z', changeNotes: 'Notarized Q2 contract copy' }
+      ],
+      comments: [],
+      accessLogs: [
+        { action: 'Downloaded', user: 'admin', timestamp: '2026-07-09T09:05:00Z' }
+      ]
+    },
+    {
+      documentId: 'DOC-003',
+      fileName: 'database_restore_point.bak',
+      category: 'Backups',
+      fileType: 'bak',
+      fileSize: '241.8 MB',
+      uploadedBy: 'system',
+      uploadedAt: '2026-07-09T02:00:00Z',
+      status: 'Archived',
+      isConfidential: true,
+      versions: [
+        { versionId: 'V-004', versionNumber: 1, fileUrl: '/dms/db_restore_v1.bak', uploadedBy: 'system', uploadedAt: '2026-07-09T02:00:00Z', changeNotes: 'Scheduled weekly backup snapshot' }
+      ],
+      comments: [],
+      accessLogs: []
+    },
+    {
+      documentId: 'DOC-004',
+      fileName: 'payslip_alex_july.pdf',
+      category: 'HR',
+      fileType: 'pdf',
+      fileSize: '85 KB',
+      uploadedBy: 'system',
+      uploadedAt: '2026-07-31T18:00:00Z',
+      status: 'Approved',
+      linkedModule: 'Payroll',
+      linkedEntityId: 'PR-002',
+      isConfidential: true,
+      versions: [
+        { versionId: 'V-005', versionNumber: 1, fileUrl: '/dms/payslip_alex_july.pdf', uploadedBy: 'system', uploadedAt: '2026-07-31T18:00:00Z', changeNotes: 'Auto-generated on payroll run cycle closure' }
+      ],
+      comments: [],
+      accessLogs: []
+    }
   ]);
 
   const [leads, setLeads] = useState([
@@ -1338,6 +1463,234 @@ export default function App() {
     setVouchers([payrollJV, ...vouchers]);
     setSelectedPayrollRunId(null);
     showToast(`Payroll disbursement completed. Double-entry Journal entry ${jvSeqNum} auto-posted!`, 'success');
+  };
+
+  // DMS Handlers
+  const handleCreateDmsDocument = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDocName) {
+      showToast('Validation Error: Document File Name is required!', 'error');
+      return;
+    }
+
+    const docId = `DOC-0${documents.length + 1}`;
+    const fileExt = newDocName.split('.').pop() || 'pdf';
+    
+    // Auto-suggest tag based on content pattern
+    let suggestedTag = '';
+    const nameLower = newDocName.toLowerCase();
+    if (nameLower.includes('gst') || nameLower.includes('tax') || nameLower.includes('filing')) {
+      suggestedTag = 'GST Compliance';
+    } else if (nameLower.includes('rent') || nameLower.includes('agree') || nameLower.includes('lease')) {
+      suggestedTag = 'Lease Contracts';
+    } else if (nameLower.includes('invoice') || nameLower.includes('bill') || nameLower.includes('receipt')) {
+      suggestedTag = 'Expense Invoices';
+    } else {
+      suggestedTag = 'General Corporate';
+    }
+
+    // Map department based on category
+    let deptId = 'Finance';
+    if (newDocCat === 'Contracts') deptId = 'Legal';
+    else if (newDocCat === 'HR') deptId = 'HR';
+    else if (newDocCat === 'Backups') deptId = 'System';
+
+    const newDoc: ERPDocument = {
+      documentId: docId,
+      fileName: newDocName,
+      category: newDocCat,
+      fileType: fileExt,
+      fileSize: newDocSize,
+      uploadedBy: 'admin',
+      uploadedAt: new Date().toISOString(),
+      status: 'Draft',
+      expiryDate: newDocExpiry || undefined,
+      isConfidential: newDocConfidential,
+      versions: [
+        {
+          versionId: `V-${Date.now().toString().slice(-3)}`,
+          versionNumber: 1,
+          fileUrl: `/dms/${newDocName}`,
+          uploadedBy: 'admin',
+          uploadedAt: new Date().toISOString(),
+          changeNotes: 'Initial ingestion upload'
+        }
+      ],
+      comments: [],
+      accessLogs: [
+        { action: 'Created', user: 'admin', timestamp: new Date().toISOString() }
+      ]
+    };
+
+    setDocuments([newDoc, ...documents]);
+    setShowUploadModal(false);
+    setNewDocName('');
+    setNewDocExpiry('');
+    setNewDocConfidential(false);
+    
+    showToast(`Ingested ${newDocName}. Auto-tagged as [${suggestedTag}] under [${newDocCat}]!`, 'success');
+  };
+
+  const handleUploadNewVersion = (docId: string) => {
+    const changeNotes = prompt('Enter change notes for this new version:', 'Updated doc content adjustments');
+    if (changeNotes === null) return;
+
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        if (doc.lockStatus && doc.lockStatus.lockedBy !== 'admin') {
+          showToast(`Block: Document is currently checked out/locked by ${doc.lockStatus.lockedBy}!`, 'error');
+          return doc;
+        }
+
+        const nextVer = doc.versions.length + 1;
+        const newVer = {
+          versionId: `V-${Date.now().toString().slice(-3)}`,
+          versionNumber: nextVer,
+          fileUrl: `/dms/${doc.fileName.replace('.', `_v${nextVer}.`)}`,
+          uploadedBy: 'admin',
+          uploadedAt: new Date().toISOString(),
+          changeNotes: changeNotes || `Upload version v${nextVer}`
+        };
+
+        const updated = {
+          ...doc,
+          fileSize: `${(parseFloat(doc.fileSize) + 0.2).toFixed(1)} MB`,
+          versions: [...doc.versions, newVer],
+          accessLogs: [{ action: 'Uploaded version', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+        };
+
+        // If selected document is currently active, sync detail preview
+        if (selectedDmsDoc && selectedDmsDoc.documentId === docId) {
+          setSelectedDmsDoc(updated);
+        }
+
+        showToast(`Uploaded new version v${nextVer} for ${doc.fileName}!`, 'success');
+        return updated;
+      }
+      return doc;
+    }));
+  };
+
+  const handleRollbackVersion = (docId: string, versionNum: number) => {
+    if (!confirm(`Are you sure you want to rollback this document to version v${versionNum}?`)) return;
+
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        const rollbackVer = doc.versions.find(v => v.versionNumber === versionNum);
+        if (!rollbackVer) return doc;
+
+        const updated = {
+          ...doc,
+          accessLogs: [{ action: `Rolled back to v${versionNum}`, user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+        };
+
+        if (selectedDmsDoc && selectedDmsDoc.documentId === docId) {
+          setSelectedDmsDoc(updated);
+        }
+
+        showToast(`Document rolled back to version v${versionNum}!`, 'success');
+        return updated;
+      }
+      return doc;
+    }));
+  };
+
+  const handleToggleLock = (docId: string) => {
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        let updated;
+        if (doc.lockStatus) {
+          // Unlock
+          updated = {
+            ...doc,
+            lockStatus: undefined,
+            accessLogs: [{ action: 'Checked In (Unlocked)', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+          };
+          showToast(`Checked in ${doc.fileName}. File lock released.`, 'success');
+        } else {
+          // Lock
+          updated = {
+            ...doc,
+            lockStatus: { lockedBy: 'admin', lockedAt: new Date().toISOString() },
+            accessLogs: [{ action: 'Checked Out (Locked)', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+          };
+          showToast(`Checked out ${doc.fileName}. Lock placed.`, 'warning');
+        }
+
+        if (selectedDmsDoc && selectedDmsDoc.documentId === docId) {
+          setSelectedDmsDoc(updated);
+        }
+        return updated;
+      }
+      return doc;
+    }));
+  };
+
+  const handlePostDmsComment = (docId: string) => {
+    if (!dmsCommentInput) return;
+
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        const newComment = {
+          author: 'admin',
+          text: dmsCommentInput,
+          timestamp: new Date().toISOString()
+        };
+
+        const updated = {
+          ...doc,
+          comments: [...doc.comments, newComment],
+          accessLogs: [{ action: 'Added annotation comment', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+        };
+
+        if (selectedDmsDoc && selectedDmsDoc.documentId === docId) {
+          setSelectedDmsDoc(updated);
+        }
+
+        setDmsCommentInput('');
+        return updated;
+      }
+      return doc;
+    }));
+  };
+
+  const handleProcessDmsWorkflow = (docId: string, action: 'Approve' | 'Reject') => {
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        const newStatus = action === 'Approve' ? 'Approved' : 'Draft';
+        const updated = {
+          ...doc,
+          status: newStatus as any,
+          accessLogs: [{ action: `${action}d Document`, user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+        };
+
+        if (selectedDmsDoc && selectedDmsDoc.documentId === docId) {
+          setSelectedDmsDoc(updated);
+        }
+
+        showToast(`Document ${doc.fileName} lifecycle status flipped to ${newStatus}!`, 'success');
+        return updated;
+      }
+      return doc;
+    }));
+  };
+
+  const handleGenerateShareLink = (docId: string) => {
+    const resultLink = `http://localhost:5174/share/dms/${docId}?token=lnk_${Date.now()}`;
+    setShareDocId(docId);
+    setShareLinkResult(resultLink);
+    setShowShareModal(true);
+    
+    // Log shared action
+    setDocuments(documents.map(doc => {
+      if (doc.documentId === docId) {
+        return {
+          ...doc,
+          accessLogs: [{ action: 'Generated time-limited share link', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+        };
+      }
+      return doc;
+    }));
   };
 
   // Initialize Dual Bar Charts on Dashboard view
@@ -3732,63 +4085,808 @@ export default function App() {
         );
       }
 
-      case 'documents':
+      case 'documents': {
+        // Filter documents based on Search, Category, Folder selection, and cross-cutting Tags
+        const filteredDocs = documents.filter(doc => {
+          const matchesSearch = doc.fileName.toLowerCase().includes(dmsSearchQuery.toLowerCase()) || 
+                                doc.category.toLowerCase().includes(dmsSearchQuery.toLowerCase()) ||
+                                doc.documentId.toLowerCase().includes(dmsSearchQuery.toLowerCase());
+          
+          const matchesCat = dmsCategoryFilter === 'ALL' || doc.category === dmsCategoryFilter;
+          
+          let matchesFolder = true;
+          if (dmsSelectedFolder !== 'all') {
+            if (dmsSelectedFolder === 'finance') matchesFolder = doc.department_id === 'Finance' || doc.category === 'Financials';
+            else if (dmsSelectedFolder === 'hr') matchesFolder = doc.department_id === 'HR' || doc.category === 'HR';
+            else if (dmsSelectedFolder === 'compliance') matchesFolder = doc.department_id === 'Finance' && doc.category === 'Compliance';
+            else if (dmsSelectedFolder === 'backups') matchesFolder = doc.category === 'Backups';
+          }
+
+          let matchesTag = true;
+          if (dmsTagFilter !== 'ALL') {
+            const nameLower = doc.fileName.toLowerCase();
+            if (dmsTagFilter === 'GST') matchesTag = nameLower.includes('gst') || nameLower.includes('tax');
+            else if (dmsTagFilter === 'Contracts') matchesTag = nameLower.includes('agreement') || nameLower.includes('rent');
+            else if (dmsTagFilter === 'Backups') matchesTag = nameLower.includes('restore') || nameLower.includes('.bak');
+          }
+
+          return matchesSearch && matchesCat && matchesFolder && matchesTag;
+        });
+
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold font-manrope text-[#161B33]">Document Explorer</h2>
-                  <p className="text-xs text-[#5B6178] mt-1">Securely archive tax sheets, bills, compliance agreements, and snapshots</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    const name = window.prompt('Enter file name to upload:', 'new_tax_compliance_filing.pdf');
-                    if (name) {
-                      const newDoc = {
-                        name,
-                        cat: 'Compliance',
-                        size: '1.8 MB',
-                        date: new Date().toISOString().split('T')[0],
-                        user: 'admin'
-                      };
-                      setDocuments([newDoc, ...documents]);
-                      showToast(`File ${name} uploaded successfully to secure vault!`, 'success');
-                    }
-                  }}
-                  className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition"
-                >
-                  <span className="material-icons-round text-sm">cloud_upload</span> Upload Document
-                </button>
+            {/* WORKSPACE HEADER */}
+            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-manrope text-[#161B33]">Secure Document Explorer (DMS)</h2>
+                <p className="text-xs text-[#5B6178] mt-1">
+                  Manage corporate digital assets, view versioning history, track compliance archives, and set access logs audits.
+                </p>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-2">FILE NAME</th>
-                      <th className="py-3 px-2">CATEGORY</th>
-                      <th className="py-3 px-2">SIZE</th>
-                      <th className="py-3 px-2">UPLOAD DATE</th>
-                      <th className="py-3 px-2 text-right">USER</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E1E5EC] text-[#161B33]">
-                    {documents.map((doc, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition">
-                        <td className="py-3 px-2 font-bold text-sm text-[#2563EB] hover:underline cursor-pointer" onClick={() => showToast(`Downloading ${doc.name}...`)}>{doc.name}</td>
-                        <td className="py-3 px-2 font-semibold text-slate-600">{doc.cat}</td>
-                        <td className="py-3 px-2 font-mono font-semibold text-slate-500">{doc.size}</td>
-                        <td className="py-3 px-2 text-slate-500 font-semibold">{doc.date}</td>
-                        <td className="py-3 px-2 text-right font-semibold text-slate-700">{doc.user}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              {/* DMS SUB-NAV SELECTOR */}
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold select-none">
+                <button 
+                  onClick={() => { setActiveDmsTab('explorer'); setSelectedDmsDoc(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeDmsTab === 'explorer' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  File Explorer
+                </button>
+                <button 
+                  onClick={() => { setActiveDmsTab('approvals'); setSelectedDmsDoc(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeDmsTab === 'approvals' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Approval Pipelines
+                </button>
+                <button 
+                  onClick={() => { setActiveDmsTab('bundles'); setSelectedDmsDoc(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeDmsTab === 'bundles' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Compliance Bundles
+                </button>
+                <button 
+                  onClick={() => { setActiveDmsTab('quota'); setSelectedDmsDoc(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeDmsTab === 'quota' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Storage Quota
+                </button>
               </div>
             </div>
+
+            {/* DMS SUB-TAB: FILE EXPLORER */}
+            {activeDmsTab === 'explorer' && (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* LEFT SIDEBAR: HYBRID FOLDERS & TAGS */}
+                <div className="lg:col-span-1 space-y-6">
+                  {/* FOLDERS HIERARCHY */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-800 tracking-wide block border-b pb-2">Folder Tree</span>
+                    <div className="text-xs font-semibold text-slate-600 space-y-2">
+                      <div 
+                        onClick={() => setDmsSelectedFolder('all')}
+                        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition ${dmsSelectedFolder === 'all' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                      >
+                        <span className="material-icons-round text-sm">folder_special</span>
+                        <span>Super Enterprise (Root)</span>
+                      </div>
+                      <div className="pl-4 space-y-1.5 border-l border-slate-200 ml-3">
+                        <div 
+                          onClick={() => setDmsSelectedFolder('finance')}
+                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition ${dmsSelectedFolder === 'finance' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                        >
+                          <span className="material-icons-round text-sm">folder</span>
+                          <span>Finance Department</span>
+                        </div>
+                        <div 
+                          onClick={() => setDmsSelectedFolder('hr')}
+                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition ${dmsSelectedFolder === 'hr' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                        >
+                          <span className="material-icons-round text-sm">folder</span>
+                          <span>HR Department</span>
+                        </div>
+                        <div 
+                          onClick={() => setDmsSelectedFolder('compliance')}
+                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition ${dmsSelectedFolder === 'compliance' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                        >
+                          <span className="material-icons-round text-sm">folder</span>
+                          <span>Compliance Vault</span>
+                        </div>
+                        <div 
+                          onClick={() => setDmsSelectedFolder('backups')}
+                          className={`flex items-center gap-2 p-1.5 rounded cursor-pointer transition ${dmsSelectedFolder === 'backups' ? 'bg-indigo-50 text-indigo-700 font-bold' : 'hover:bg-slate-50'}`}
+                        >
+                          <span className="material-icons-round text-sm">folder</span>
+                          <span>System Backups</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CROSS-CUTTING TAGS */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                    <span className="text-[10px] font-extrabold uppercase text-slate-800 tracking-wide block border-b pb-2">Cross-Cutting Tags</span>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-bold">
+                      <button 
+                        onClick={() => setDmsTagFilter('ALL')}
+                        className={`px-2.5 py-1 rounded-full border transition ${dmsTagFilter === 'ALL' ? 'bg-[#10163A] text-white' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        All Tags
+                      </button>
+                      <button 
+                        onClick={() => setDmsTagFilter('GST')}
+                        className={`px-2.5 py-1 rounded-full border transition ${dmsTagFilter === 'GST' ? 'bg-teal-50 text-teal-700 border-teal-300 font-extrabold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        #GST Compliance
+                      </button>
+                      <button 
+                        onClick={() => setDmsTagFilter('Contracts')}
+                        className={`px-2.5 py-1 rounded-full border transition ${dmsTagFilter === 'Contracts' ? 'bg-indigo-50 text-indigo-700 border-indigo-300 font-extrabold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        #Lease Contracts
+                      </button>
+                      <button 
+                        onClick={() => setDmsTagFilter('Backups')}
+                        className={`px-2.5 py-1 rounded-full border transition ${dmsTagFilter === 'Backups' ? 'bg-rose-50 text-rose-700 border-rose-300 font-extrabold' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        #System Backups
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: REGISTRY & SEARCH */}
+                <div className="lg:col-span-3 space-y-6">
+                  {/* CONTROLS BAR */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Search Field */}
+                    <div className="relative flex-1 max-w-md">
+                      <FiSearch className="absolute left-3 top-3 text-slate-400" />
+                      <input 
+                        type="text"
+                        value={dmsSearchQuery}
+                        onChange={e => setDmsSearchQuery(e.target.value)}
+                        placeholder="Search document names, file tags, contents..."
+                        className="w-full pl-9 pr-4 py-2 border rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-[#12A594]"
+                      />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-3">
+                      <select 
+                        value={dmsCategoryFilter}
+                        onChange={e => setDmsCategoryFilter(e.target.value)}
+                        className="p-2 border rounded bg-white text-xs font-bold text-slate-600"
+                      >
+                        <option value="ALL">All Categories</option>
+                        <option value="Compliance">Compliance Reports</option>
+                        <option value="Contracts">Contracts</option>
+                        <option value="Backups">System Backups</option>
+                        <option value="HR">HR Documents</option>
+                        <option value="Bills & Receipts">Bills & Receipts</option>
+                      </select>
+
+                      <button 
+                        onClick={() => setShowUploadModal(true)}
+                        className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3.5 py-2 rounded text-xs font-extrabold flex items-center gap-1.5 transition"
+                      >
+                        <FiPlus /> Ingest Document
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* REGISTRY LIST GRID */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center border-b pb-2">
+                      <span className="text-[10px] font-extrabold uppercase text-slate-800 tracking-wide">Document Registry Results ({filteredDocs.length})</span>
+                      <span className="text-[10px] text-slate-400 font-bold font-mono">Company Root: Company A</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredDocs.map(doc => {
+                        const currentVer = doc.versions.length;
+                        const isLocked = !!doc.lockStatus;
+                        
+                        // Expiry Warning Check
+                        const isExpiring = doc.expiryDate && new Date(doc.expiryDate) < new Date('2026-08-30');
+
+                        return (
+                          <div 
+                            key={doc.documentId}
+                            className={`border rounded-xl p-4 transition flex flex-col justify-between space-y-3 hover:border-indigo-300 hover:shadow-sm ${
+                              doc.isConfidential ? 'bg-amber-50/20 border-amber-200' : 'border-slate-200'
+                            }`}
+                          >
+                            <div className="space-y-1">
+                              {/* Header details */}
+                              <div className="flex justify-between items-start gap-2">
+                                <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded border ${
+                                  doc.category === 'Compliance' ? 'bg-teal-50 border-teal-200 text-teal-700' :
+                                  doc.category === 'Contracts' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' :
+                                  doc.category === 'Backups' ? 'bg-rose-50 border-rose-200 text-rose-700' :
+                                  'bg-slate-50 border-slate-200 text-slate-600'
+                                }`}>
+                                  {doc.category}
+                                </span>
+
+                                <div className="flex items-center gap-1.5">
+                                  {isLocked && (
+                                    <span className="material-icons-round text-amber-500 text-sm" title={`Locked by ${doc.lockStatus?.lockedBy}`}>
+                                      lock
+                                    </span>
+                                  )}
+                                  {doc.isConfidential && (
+                                    <span className="bg-red-100 text-red-700 font-extrabold text-[8px] uppercase px-1.5 rounded">
+                                      CONFIDENTIAL
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* File Name & ID */}
+                              <div>
+                                <span 
+                                  onClick={() => setSelectedDmsDoc(doc)}
+                                  className="font-bold text-sm text-[#161B33] hover:text-[#12A594] cursor-pointer block truncate"
+                                >
+                                  {doc.fileName}
+                                </span>
+                                <span className="font-mono text-[9px] text-slate-400">ID: {doc.documentId} • Size: {doc.fileSize}</span>
+                              </div>
+                            </div>
+
+                            {/* Warning / Link alerts */}
+                            {isExpiring && (
+                              <div className="bg-red-50 border border-red-200 rounded p-1.5 text-[9px] text-rose-700 font-semibold flex items-center gap-1">
+                                <span className="material-icons-round text-[10px]">warning</span>
+                                <span>Expiry Notice: File contract expires on {doc.expiryDate}!</span>
+                              </div>
+                            )}
+
+                            {doc.linkedModule && (
+                              <div className="bg-slate-50 border rounded p-1.5 text-[9px] text-slate-500 font-semibold flex items-center justify-between">
+                                <span>Linked to: {doc.linkedModule} ({doc.linkedEntityId || 'Record Link'})</span>
+                                <span className="text-[#12A594] hover:underline cursor-pointer" onClick={() => showToast(`Audit link mapping: Jump straight to related ${doc.linkedModule} record.`, 'success')}>
+                                  View Source Record
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Bottom Controls */}
+                            <div className="border-t pt-2 flex justify-between items-center text-[10px] font-bold text-slate-500">
+                              <span>Version: v{currentVer}</span>
+                              
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => handleToggleLock(doc.documentId)}
+                                  className={`p-1 rounded border transition ${isLocked ? 'bg-amber-50 border-amber-300 text-amber-600' : 'hover:bg-slate-50'}`}
+                                  title={isLocked ? 'Release lock (Check-In)' : 'Lock file (Check-Out)'}
+                                >
+                                  <span className="material-icons-round text-xs">lock_open</span>
+                                </button>
+                                <button 
+                                  onClick={() => handleGenerateShareLink(doc.documentId)}
+                                  className="p-1 rounded border hover:bg-slate-50"
+                                  title="Generate secure share link"
+                                >
+                                  <span className="material-icons-round text-xs">share</span>
+                                </button>
+                                <button 
+                                  onClick={() => setSelectedDmsDoc(doc)}
+                                  className="bg-slate-100 hover:bg-slate-200 text-[#10163A] px-2.5 py-1 rounded"
+                                >
+                                  Open Detail Drawers
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DMS SUB-TAB: APPROVAL WORKFLOWS */}
+            {activeDmsTab === 'approvals' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Contracts & Documents Approval Workflows</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Documents requiring multi-step sign-offs: Legal (Stage 1) → Finance (Stage 2) → Admin (Stage 3).</p>
+                </div>
+
+                <div className="space-y-4">
+                  {documents.filter(d => d.status === 'Pending Approval').map(doc => (
+                    <div key={doc.documentId} className="border border-slate-200 rounded-xl p-5 space-y-4 bg-slate-50/50">
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <div>
+                          <span className="font-bold text-sm text-slate-800">{doc.fileName}</span>
+                          <span className="font-mono text-[10px] text-slate-400 ml-3">({doc.category})</span>
+                        </div>
+                        <span className="font-mono font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded text-[10px] uppercase">
+                          Pending Sign-off
+                        </span>
+                      </div>
+
+                      {/* Approval Tracker */}
+                      <div className="grid grid-cols-3 gap-4 text-center text-xs font-semibold">
+                        <div className="border border-emerald-200 bg-emerald-50 text-emerald-700 p-2.5 rounded-lg">
+                          <div className="font-bold uppercase text-[9px]">Step 1: Legal Department</div>
+                          <div className="font-extrabold mt-1">SIGNED OFF ✓</div>
+                        </div>
+                        <div className="border border-amber-300 bg-amber-50 text-amber-800 p-2.5 rounded-lg animate-pulse">
+                          <div className="font-bold uppercase text-[9px]">Step 2: Finance Control</div>
+                          <div className="font-extrabold mt-1">AWAITING REVIEW</div>
+                        </div>
+                        <div className="border border-slate-200 bg-white text-slate-400 p-2.5 rounded-lg">
+                          <div className="font-bold uppercase text-[9px]">Step 3: Executive Board</div>
+                          <div className="font-bold mt-1">LOCKED</div>
+                        </div>
+                      </div>
+
+                      {/* Sign-off Actions */}
+                      <div className="flex justify-end gap-3 text-xs font-bold">
+                        <button 
+                          onClick={() => handleProcessDmsWorkflow(doc.documentId, 'Approve')}
+                          className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-4 py-1.5 rounded transition"
+                        >
+                          Approve Sign-off
+                        </button>
+                        <button 
+                          onClick={() => handleProcessDmsWorkflow(doc.documentId, 'Reject')}
+                          className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-1.5 rounded transition"
+                        >
+                          Reject / Send back to draft
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {documents.filter(d => d.status === 'Pending Approval').length === 0 && (
+                    <div className="text-slate-400 font-semibold italic text-center p-8 border-2 border-dashed border-slate-200 rounded-lg">
+                      No documents currently in the approval workflow queue.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* DMS SUB-TAB: COMPLIANCE BUNDLES */}
+            {activeDmsTab === 'bundles' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Statutory Audit Document Bundles</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Auto-collect all GST e-invoices, TDS declarations, and financial receipts into compiled export packs.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* BUNDLE PACKET CARD */}
+                  <div className="border border-slate-200 rounded-xl p-5 space-y-4 bg-slate-50/50">
+                    <div className="border-b pb-2">
+                      <span className="font-extrabold text-sm text-[#10163A] block">Q2 FY 2026-27 GST Audit bundle</span>
+                      <span className="text-[10px] text-slate-400 font-semibold mt-1 block">Period: July 1st, 2026 to September 30th, 2026</span>
+                    </div>
+
+                    <div className="text-xs font-semibold text-slate-600 space-y-2">
+                      <div className="flex justify-between">
+                        <span>GST Invoices (Sales/Purchases):</span>
+                        <span className="font-mono text-slate-800 font-bold">14 Documents found</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Compliance Tax Returns (TDS):</span>
+                        <span className="font-mono text-slate-800 font-bold">2 Documents found</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Supporting Bills & Receipts:</span>
+                        <span className="font-mono text-slate-800 font-bold">5 Documents found</span>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        showToast('Compiling ZIP audit pack... Hash verification completed.', 'success');
+                        setTimeout(() => {
+                          showToast('ZIP packet exported: audit_bundle_q2_gst.zip download started.', 'success');
+                        }, 1000);
+                      }}
+                      className="w-full text-center bg-[#10163A] hover:bg-[#1B2456] text-white py-2 rounded text-xs font-bold transition"
+                    >
+                      Export Bundle ZIP Pack
+                    </button>
+                  </div>
+
+                  {/* INFO PANEL */}
+                  <div className="border border-indigo-200 bg-indigo-50/30 rounded-xl p-5 space-y-3 text-xs font-semibold text-slate-600">
+                    <span className="font-extrabold text-indigo-700 uppercase text-[10px] block">Audit Integrity Verification</span>
+                    <p className="text-slate-500 leading-relaxed">
+                      All documents compiled in these bundles are hashed using SHA-256 signatures to ensure compliance standards. Any changes made to invoice PDFs or backup restore points after period lock will flag verification validation errors automatically.
+                    </p>
+                    <div className="border-t border-indigo-100 pt-2 text-[10px] text-indigo-600 font-bold flex items-center gap-1.5">
+                      <span className="material-icons-round text-sm">security</span>
+                      <span>SHA-256 verification hash: 8f9b4c2e...88a1b</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DMS SUB-TAB: STORAGE QUOTA */}
+            {activeDmsTab === 'quota' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Storage Quota & Deduplication Analytics</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Secure corporate storage telemetry tracking. Hash-based duplicates are flagged automatically.</p>
+                </div>
+
+                {/* QUOTA GRAPH */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs font-extrabold text-slate-800">
+                    <span>Corporate Allocation Storage</span>
+                    <span>1.24 GB Used of 10.00 GB (12.4%)</span>
+                  </div>
+                  <div className="w-full bg-slate-100 h-4 rounded-full overflow-hidden flex border">
+                    <div className="bg-[#E2662F] h-full" style={{ width: '85%' }} title="Backups (85%)"></div>
+                    <div className="bg-indigo-600 h-full" style={{ width: '10%' }} title="Compliance (10%)"></div>
+                    <div className="bg-[#12A594] h-full" style={{ width: '5%' }} title="Contracts / HR (5%)"></div>
+                  </div>
+                  <div className="flex gap-4 text-[10px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#E2662F]"></span> Backups (1.05 GB)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span> Compliance (120 MB)</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-[#12A594]"></span> Contracts & HR (70 MB)</span>
+                  </div>
+                </div>
+
+                {/* DUPLICATE DETECTOR */}
+                <div className="border border-amber-200 bg-amber-50/20 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-amber-200/50 pb-2">
+                    <span className="material-icons-round text-amber-500 text-sm">warning</span>
+                    <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wide">Duplicate File Detection Alert</span>
+                  </div>
+                  <div className="text-xs font-semibold text-slate-600 leading-relaxed flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-slate-800">duplicate_invoice_v2_backup.pdf</div>
+                      <div className="text-[10px] text-slate-400 font-mono">Matched SHA-256 hash with invoice_q2_raw_sign.pdf</div>
+                    </div>
+                    <button 
+                      onClick={() => showToast('Deduplication cleanup complete. 42 MB freed.', 'success')}
+                      className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded font-bold text-[10px] transition"
+                    >
+                      Deduplicate & Clean
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DOCUMENT DETAIL DRAWER (WITH PREVIEW, VERSIONS & COMMENTS) */}
+            {selectedDmsDoc && (
+              <div className="fixed inset-0 z-[9999] overflow-hidden">
+                <div 
+                  onClick={() => setSelectedDmsDoc(null)}
+                  className="absolute inset-0 bg-[#10163A]/50 backdrop-blur-sm transition-opacity duration-300"
+                ></div>
+                
+                <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+                  <div className="w-screen max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between animate-slide-in">
+                    {/* Header */}
+                    <div className="p-6 border-b border-slate-100 bg-[#10163A] text-white flex justify-between items-center">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-base tracking-wider uppercase font-manrope">{selectedDmsDoc.fileName}</span>
+                          <span className="bg-slate-600/50 text-slate-200 border px-2 py-0.5 rounded text-[9px] uppercase font-bold font-mono">
+                            {selectedDmsDoc.status}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wide mt-1">
+                          Category: {selectedDmsDoc.category} • Size: {selectedDmsDoc.fileSize}
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedDmsDoc(null)}
+                        className="text-white hover:text-rose-400 font-extrabold text-lg p-1 transition"
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-800 font-semibold">
+                      {/* WATERMARKED PREVIEW CONTAINER */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">In-Browser File Document Preview</span>
+                        <div className="relative border rounded-lg p-5 bg-slate-900 text-slate-300 font-mono text-[11px] leading-relaxed select-none overflow-hidden h-40">
+                          {/* Confidential Diagonal Watermark */}
+                          {selectedDmsDoc.isConfidential && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none rotate-[-15deg] select-none opacity-20">
+                              <span className="text-rose-500 font-extrabold text-3xl tracking-widest uppercase">CONFIDENTIAL & SECURE</span>
+                            </div>
+                          )}
+
+                          <div className="space-y-1">
+                            <div>% ERP DMS SECURE PREVIEW ENGINE v1.02</div>
+                            <div>% Document Source ID: {selectedDmsDoc.documentId}</div>
+                            <div>% Uploaded By: {selectedDmsDoc.uploadedBy} @ {selectedDmsDoc.uploadedAt.slice(0,10)}</div>
+                            <div className="mt-2 text-slate-400 italic">// [SECURE METADATA PREVIEW BLOCK]</div>
+                            <div>// Document contents are fully encrypted at rest using AES-256 constraints.</div>
+                            <div>// Verified compliance hash signature matches statutory logs.</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* VERSION CONTROL HISTORY */}
+                      <div className="space-y-3 border-t pt-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Version History Logs</span>
+                          <button 
+                            onClick={() => handleUploadNewVersion(selectedDmsDoc.documentId)}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-1 rounded text-[10px] transition"
+                          >
+                            + Upload New Version
+                          </button>
+                        </div>
+
+                        <div className="border rounded-lg overflow-hidden divide-y divide-slate-100">
+                          {selectedDmsDoc.versions.map(v => (
+                            <div key={v.versionId} className="p-3 bg-slate-50/50 flex justify-between items-center text-[11px]">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="bg-[#10163A] text-white px-1.5 py-0.2 rounded text-[9px] font-bold">v{v.versionNumber}</span>
+                                  <span className="font-bold text-slate-800">{v.changeNotes}</span>
+                                </div>
+                                <div className="text-[10px] text-slate-400 mt-0.5">Uploaded by {v.uploadedBy} on {v.uploadedAt.slice(0,16).replace('T', ' ')}</div>
+                              </div>
+                              {v.versionNumber < selectedDmsDoc.versions.length && (
+                                <button 
+                                  onClick={() => handleRollbackVersion(selectedDmsDoc.documentId, v.versionNumber)}
+                                  className="text-[#12A594] hover:underline text-[10px]"
+                                >
+                                  Rollback to here
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* COLLABORATIVE ANNOTATIONS / COMMENTS */}
+                      <div className="space-y-3 border-t pt-4">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Collaboration Review Comments</span>
+                        
+                        <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+                          {selectedDmsDoc.comments.map((comment, idx) => (
+                            <div key={idx} className="bg-slate-100 border p-2.5 rounded-lg space-y-1 text-[11px]">
+                              <div className="flex justify-between items-center">
+                                <span className="font-extrabold text-slate-800 uppercase text-[9px]">{comment.author}</span>
+                                <span className="text-[9px] text-slate-400">{comment.timestamp.slice(11,16)}</span>
+                              </div>
+                              <p className="text-slate-600 font-semibold">{comment.text}</p>
+                            </div>
+                          ))}
+                          {selectedDmsDoc.comments.length === 0 && (
+                            <div className="text-slate-400 italic text-center text-[11px] py-2">No annotation review comments posted on this file.</div>
+                          )}
+                        </div>
+
+                        {/* Add Comment */}
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            value={dmsCommentInput}
+                            onChange={e => setDmsCommentInput(e.target.value)}
+                            placeholder="Add annotation review note..."
+                            className="flex-1 p-2 border rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#12A594]"
+                          />
+                          <button 
+                            onClick={() => handlePostDmsComment(selectedDmsDoc.documentId)}
+                            className="bg-[#10163A] hover:bg-[#1B2456] text-white px-3 py-2 rounded text-xs transition"
+                          >
+                            Comment
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* SECURITY ACCESS AUDIT LOG */}
+                      <div className="space-y-3 border-t pt-4">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Security Access Audit Log</span>
+                        <div className="relative border-l-2 border-slate-200 pl-4 space-y-3">
+                          {selectedDmsDoc.accessLogs.map((log, index) => (
+                            <div key={index} className="relative text-xs">
+                              <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#12A594]"></span>
+                              <div className="flex justify-between items-center">
+                                <span className="font-extrabold text-[#10163A] uppercase text-[9px]">{log.action}</span>
+                                <span className="text-[9px] text-slate-400 font-mono">{log.timestamp.slice(11,16)}</span>
+                              </div>
+                              <p className="text-slate-500 font-semibold mt-0.5">Performed by user: {log.user}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2.5">
+                      <button 
+                        onClick={() => {
+                          // Simulate download
+                          showToast(`Initiating secure download: ${selectedDmsDoc.fileName}...`, 'success');
+                          
+                          // Log download event
+                          setDocuments(documents.map(doc => {
+                            if (doc.documentId === selectedDmsDoc.documentId) {
+                              const updated = {
+                                ...doc,
+                                accessLogs: [{ action: 'Downloaded File', user: 'admin', timestamp: new Date().toISOString() }, ...doc.accessLogs]
+                              };
+                              setSelectedDmsDoc(updated);
+                              return updated;
+                            }
+                            return doc;
+                          }));
+                        }}
+                        className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2.5 rounded font-extrabold transition text-center"
+                      >
+                        Secure Download
+                      </button>
+
+                      <button 
+                        onClick={() => setSelectedDmsDoc(null)}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded font-bold transition text-center"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: INGEST DOCUMENT */}
+            {showUploadModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <FiPlus className="text-[#12A594]" /> Ingest Document Profile
+                    </h3>
+                    <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  <form onSubmit={handleCreateDmsDocument} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Document File Name</label>
+                      <input 
+                        type="text" 
+                        value={newDocName}
+                        onChange={e => setNewDocName(e.target.value)}
+                        placeholder="e.g. gst_e_invoice_august.pdf"
+                        className="w-full p-2 border rounded text-slate-800 font-bold" 
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Category</label>
+                        <select 
+                          value={newDocCat} 
+                          onChange={e => setNewDocCat(e.target.value as any)}
+                          className="w-full p-2 border rounded bg-white text-slate-800"
+                        >
+                          <option value="Compliance">Compliance Reports</option>
+                          <option value="Contracts">Contracts</option>
+                          <option value="Backups">System Backups</option>
+                          <option value="HR">HR Documents</option>
+                          <option value="Financials">Financial Statements</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Simulated Size</label>
+                        <input 
+                          type="text" 
+                          value={newDocSize}
+                          onChange={e => setNewDocSize(e.target.value)}
+                          className="w-full p-2 border rounded text-slate-800 font-mono font-bold" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Contract Expiry Date</label>
+                        <input 
+                          type="date" 
+                          value={newDocExpiry}
+                          onChange={e => setNewDocExpiry(e.target.value)}
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                        />
+                      </div>
+                      <div className="flex items-center pt-5">
+                        <input 
+                          type="checkbox"
+                          id="confidential_chk"
+                          checked={newDocConfidential}
+                          onChange={e => setNewDocConfidential(e.target.checked)}
+                          className="w-4 h-4 rounded text-[#12A594] focus:ring-[#12A594] border-slate-300 mr-2"
+                        />
+                        <label htmlFor="confidential_chk" className="font-bold text-slate-600 block">Is Confidential</label>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition">
+                        Ingest & Auto-Tag File
+                      </button>
+                      <button type="button" onClick={() => setShowUploadModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: TIME-LIMITED SHARE LINK */}
+            {showShareModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <FiShare className="text-[#12A594]" /> Temporary Shared Link
+                    </h3>
+                    <button onClick={() => setShowShareModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Secure Expiration Limit Date</label>
+                      <input 
+                        type="date"
+                        value={shareExpires}
+                        onChange={e => setShareExpires(e.target.value)}
+                        className="w-full p-2 border rounded font-mono text-slate-800"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="font-bold uppercase text-[10px] text-slate-500 block">External share link URL</span>
+                      <div className="bg-slate-50 border p-2.5 rounded-lg select-all font-mono text-[10px] text-indigo-700 break-all border-indigo-200">
+                        {shareLinkResult}
+                      </div>
+                    </div>
+
+                    <div className="bg-emerald-50 border border-emerald-200 rounded p-2 text-[9px] text-[#2E9E5B] font-semibold flex items-center gap-1">
+                      <span className="material-icons-round text-[10px]">check_circle</span>
+                      <span>Link encrypted with token. Access tracker audits active.</span>
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(shareLinkResult);
+                          showToast('Copy to Clipboard completed!', 'success');
+                          setShowShareModal(false);
+                        }}
+                        className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition text-center"
+                      >
+                        Copy Link
+                      </button>
+                      <button 
+                        onClick={() => setShowShareModal(false)}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition text-center"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
         );
+      }
 
       case 'reports':
         return (
