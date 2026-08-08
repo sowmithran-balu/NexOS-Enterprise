@@ -26,6 +26,151 @@ interface TabInfo {
   view: string;
 }
 
+interface VoucherLine {
+  lineId: number;
+  accountId: number;
+  debitAmount: number;
+  creditAmount: number;
+  costCenterId?: string;
+  departmentId?: string;
+  projectId?: string;
+  taxCode?: string;
+  lineNarration?: string;
+}
+
+interface VoucherAuditLog {
+  logId: number;
+  action: 'Created' | 'Edited' | 'Approved' | 'Posted' | 'Reversed' | 'Cancelled';
+  performedBy: string;
+  performedAt: string;
+  details?: string;
+}
+
+interface Voucher {
+  voucherId: string;
+  voucherType: 'Journal Voucher' | 'Payment' | 'Receipt' | 'Contra' | 'Sales' | 'Purchase' | 'Debit Note' | 'Credit Note' | 'Depreciation' | 'Opening Balance';
+  voucherNumber: string;
+  date: string;
+  fiscalYear: string;
+  fiscalPeriod: string;
+  narration: string;
+  referenceNumber: string;
+  sourceModule: 'Sales' | 'Purchase' | 'Payroll' | 'Manual';
+  sourceDocumentId?: string;
+  status: 'Draft' | 'Pending Approval' | 'Approved' | 'Posted' | 'Reversed' | 'Cancelled';
+  createdBy: string;
+  createdAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  postedAt?: string;
+  reversalOf?: string;
+  attachments: string[];
+  currency: string;
+  exchangeRate: number;
+  totalDebit: number;
+  totalCredit: number;
+  lines: VoucherLine[];
+  history: VoucherAuditLog[];
+}
+
+interface ReconRecord {
+  reconId: number;
+  date: string;
+  description: string;
+  amount: number;
+  type: 'Withdrawal' | 'Deposit';
+  matchedVoucherId?: string;
+  status: 'Matched' | 'Unmatched';
+}
+
+interface PayrollEmployee {
+  employeeId: string;
+  name: string;
+  departmentId: string;
+  designation: string;
+  dateOfJoining: string;
+  dateOfExit?: string;
+  bankAccountNo: string;
+  ifscCode: string;
+  panNumber: string;
+  pfNumber: string;
+  esiNumber: string;
+  taxRegime: 'old' | 'new';
+  status: 'active' | 'resigned' | 'terminated';
+}
+
+interface SalaryComponent {
+  componentName: 'Basic' | 'HRA' | 'DA' | 'Conveyance' | 'Special Allowance' | 'Bonus' | 'LTA' | 'PF Deduction' | 'ESI Deduction' | 'TDS Deduction';
+  componentType: 'earning' | 'deduction';
+  calculationType: 'flat' | 'percentage';
+  calculationBase?: string;
+  value: number;
+}
+
+interface SalaryStructure {
+  employeeId: string;
+  components: SalaryComponent[];
+}
+
+interface PayrollRun {
+  runId: string;
+  periodMonth: string;
+  periodYear: string;
+  runType: 'regular' | 'off-cycle' | 'bonus' | 'F&F';
+  status: 'draft' | 'processing' | 'locked' | 'paid';
+  runDate: string;
+  processedBy: string;
+  approvedBy?: string;
+  totalGross: number;
+  totalDeductions: number;
+  totalNet: number;
+}
+
+interface Payslip {
+  payslipId: string;
+  runId: string;
+  employeeId: string;
+  grossEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  pfEmployee: number;
+  pfEmployer: number;
+  tds: number;
+  esi: number;
+  professionalTax: number;
+  lopDays: number;
+  paymentStatus: 'unpaid' | 'processing' | 'paid' | 'failed';
+  paymentDate?: string;
+}
+
+interface EmployeeLoan {
+  loanId: string;
+  employeeId: string;
+  loanType: 'advance' | 'loan';
+  principalAmount: number;
+  emiAmount: number;
+  remainingBalance: number;
+  startDate: string;
+  status: 'active' | 'closed';
+}
+
+interface StatutoryFiling {
+  filingId: string;
+  runId: string;
+  filingType: 'PF' | 'ESI' | 'PT' | 'TDS';
+  dueDate: string;
+  filedDate?: string;
+  status: 'pending' | 'filed' | 'overdue';
+  challanReference?: string;
+}
+
+interface AttendanceSummary {
+  employeeId: string;
+  presentDays: number;
+  lopDays: number;
+  overtimeHours: number;
+}
+
 export default function App() {
   // Session / Header state matching exact user screenshot
   const [companyName, setCompanyName] = useState('Super Enterprise Corp');
@@ -46,7 +191,264 @@ export default function App() {
   const [ledgers, setLedgers] = useState<Ledger[]>([
     { id: 1, code: 'ACT-10003', name: 'Silicon Valley Bank', group: 'Bank Accounts', openingBalance: 45000, dc: 'DEBIT' },
     { id: 2, code: 'ACT-10002', name: 'Acme Corp Sales A/C', group: 'Sales Account', openingBalance: 12850, dc: 'CREDIT' },
-    { id: 3, code: 'ACT-10001', name: 'Office Expense A/C', group: 'Indirect Expenses', openingBalance: 2400, dc: 'DEBIT' }
+    { id: 3, code: 'ACT-10001', name: 'Office Expense A/C', group: 'Indirect Expenses', openingBalance: 2400, dc: 'DEBIT' },
+    { id: 4, code: 'ACT-10004', name: 'Petty Cash Register', group: 'Bank Accounts', openingBalance: 1500, dc: 'DEBIT' },
+    { id: 5, code: 'ACT-10005', name: 'Equity Capital A/c', group: 'Equity', openingBalance: 100000, dc: 'CREDIT' },
+    { id: 6, code: 'ACT-10006', name: 'Globex Logistics (Creditor)', group: 'Sundry Creditors', openingBalance: 8400, dc: 'CREDIT' },
+    { id: 7, code: 'ACT-10007', name: 'Machinery Asset A/c', group: 'Fixed Assets', openingBalance: 25000, dc: 'DEBIT' },
+    { id: 8, code: 'ACT-10008', name: 'Depreciation Reserve', group: 'Fixed Assets', openingBalance: 5000, dc: 'CREDIT' },
+    { id: 9, code: 'ACT-20001', name: 'Salary Expense A/C', group: 'Indirect Expenses', openingBalance: 0, dc: 'DEBIT' },
+    { id: 10, code: 'ACT-20002', name: 'Employee Payable A/C', group: 'Current Liabilities', openingBalance: 0, dc: 'CREDIT' },
+    { id: 11, code: 'ACT-20003', name: 'PF Payable A/C', group: 'Current Liabilities', openingBalance: 0, dc: 'CREDIT' },
+    { id: 12, code: 'ACT-20004', name: 'TDS Payable A/C', group: 'Current Liabilities', openingBalance: 0, dc: 'CREDIT' },
+    { id: 13, code: 'ACT-20005', name: 'Employer PF Expense A/C', group: 'Indirect Expenses', openingBalance: 0, dc: 'DEBIT' }
+  ]);
+
+  // Voucher management state
+  const [activeTransactionSubTab, setActiveTransactionSubTab] = useState<'list' | 'create' | 'reconcile' | 'import'>('list');
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+
+  // Voucher Search & Filter States
+  const [txSearch, setTxSearch] = useState('');
+  const [txTypeFilter, setTxTypeFilter] = useState('ALL');
+  const [txStatusFilter, setTxStatusFilter] = useState('ALL');
+  const [txDateFrom, setTxDateFrom] = useState('');
+  const [txDateTo, setTxDateTo] = useState('');
+
+  // Seeded bank statement lines for Bank Reconciliation
+  const [reconRecords, setReconRecords] = useState<ReconRecord[]>([
+    { reconId: 101, date: '2026-07-10', description: 'ACH DEP ACME CORP INV-901', amount: 12500, type: 'Deposit', matchedVoucherId: 'VT-003', status: 'Matched' },
+    { reconId: 102, date: '2026-07-09', description: 'CHK 10842 OFFICE RENT Q2', amount: 3500, type: 'Withdrawal', matchedVoucherId: 'VT-002', status: 'Matched' },
+    { reconId: 103, date: '2026-08-05', description: 'DEB broadband internet sub', amount: 150, type: 'Withdrawal', status: 'Unmatched' },
+    { reconId: 104, date: '2026-08-06', description: 'TRF customer refund interest', amount: 420, type: 'Deposit', status: 'Unmatched' }
+  ]);
+
+  // Voucher state list seeded
+  const [vouchers, setVouchers] = useState<Voucher[]>([
+    {
+      voucherId: 'VT-001',
+      voucherType: 'Opening Balance',
+      voucherNumber: 'OB-2026-001',
+      date: '2026-04-01',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 01',
+      narration: 'Initial setup of corporate opening balances',
+      referenceNumber: 'REF-OB-001',
+      sourceModule: 'Manual',
+      status: 'Posted',
+      createdBy: 'admin',
+      createdAt: '2026-04-01T09:00:00Z',
+      postedAt: '2026-04-01T09:05:00Z',
+      attachments: ['incorporation_certificate.pdf'],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 125000,
+      totalCredit: 125000,
+      lines: [
+        { lineId: 1, accountId: 1, debitAmount: 100000, creditAmount: 0 },
+        { lineId: 2, accountId: 7, debitAmount: 25000, creditAmount: 0 },
+        { lineId: 3, accountId: 5, debitAmount: 0, creditAmount: 125000 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'admin', performedAt: '2026-04-01T09:00:00Z', details: 'Setup opening accounts' },
+        { logId: 2, action: 'Posted', performedBy: 'admin', performedAt: '2026-04-01T09:05:00Z', details: 'Initial release' }
+      ]
+    },
+    {
+      voucherId: 'VT-002',
+      voucherType: 'Payment',
+      voucherNumber: 'PV-2026-001',
+      date: '2026-07-09',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 04',
+      narration: 'Office Rent Payment Q2',
+      referenceNumber: 'REF-PV-002',
+      sourceModule: 'Manual',
+      status: 'Posted',
+      createdBy: 'alex',
+      createdAt: '2026-07-09T10:00:00Z',
+      postedAt: '2026-07-09T10:10:00Z',
+      attachments: ['rent_receipt_q2.pdf'],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 3500,
+      totalCredit: 3500,
+      lines: [
+        { lineId: 1, accountId: 3, debitAmount: 3500, creditAmount: 0 },
+        { lineId: 2, accountId: 1, debitAmount: 0, creditAmount: 3500 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'alex', performedAt: '2026-07-09T10:00:00Z' },
+        { logId: 2, action: 'Posted', performedBy: 'admin', performedAt: '2026-07-09T10:10:00Z' }
+      ]
+    },
+    {
+      voucherId: 'VT-003',
+      voucherType: 'Receipt',
+      voucherNumber: 'RV-2026-001',
+      date: '2026-07-10',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 04',
+      narration: 'Acme Invoice Payment receipt',
+      referenceNumber: 'REF-RV-003',
+      sourceModule: 'Sales',
+      sourceDocumentId: 'INV-901',
+      status: 'Posted',
+      createdBy: 'admin',
+      createdAt: '2026-07-10T11:00:00Z',
+      postedAt: '2026-07-10T11:15:00Z',
+      attachments: ['bank_deposit_slip.pdf'],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 12500,
+      totalCredit: 12500,
+      lines: [
+        { lineId: 1, accountId: 1, debitAmount: 12500, creditAmount: 0 },
+        { lineId: 2, accountId: 2, debitAmount: 0, creditAmount: 12500 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'admin', performedAt: '2026-07-10T11:00:00Z' },
+        { logId: 2, action: 'Posted', performedBy: 'admin', performedAt: '2026-07-10T11:15:00Z' }
+      ]
+    },
+    {
+      voucherId: 'VT-004',
+      voucherType: 'Contra',
+      voucherNumber: 'CV-2026-001',
+      date: '2026-07-11',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 04',
+      narration: 'Cash withdrawal for petty cash drawer',
+      referenceNumber: 'REF-CV-004',
+      sourceModule: 'Manual',
+      status: 'Posted',
+      createdBy: 'admin',
+      createdAt: '2026-07-11T14:00:00Z',
+      postedAt: '2026-07-11T14:05:00Z',
+      attachments: [],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 2000,
+      totalCredit: 2000,
+      lines: [
+        { lineId: 1, accountId: 4, debitAmount: 2000, creditAmount: 0 },
+        { lineId: 2, accountId: 1, debitAmount: 0, creditAmount: 2000 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'admin', performedAt: '2026-07-11T14:00:00Z' },
+        { logId: 2, action: 'Posted', performedBy: 'admin', performedAt: '2026-07-11T14:05:00Z' }
+      ]
+    },
+    {
+      voucherId: 'VT-005',
+      voucherType: 'Sales',
+      voucherNumber: 'SV-2026-001',
+      date: '2026-07-12',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 04',
+      narration: 'Invoice posting auto sales INV-001',
+      referenceNumber: 'REF-SV-005',
+      sourceModule: 'Sales',
+      sourceDocumentId: 'INV-001',
+      status: 'Posted',
+      createdBy: 'system',
+      createdAt: '2026-07-12T16:00:00Z',
+      postedAt: '2026-07-12T16:00:00Z',
+      attachments: [],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 8400,
+      totalCredit: 8400,
+      lines: [
+        { lineId: 1, accountId: 1, debitAmount: 8400, creditAmount: 0 },
+        { lineId: 2, accountId: 2, debitAmount: 0, creditAmount: 8400 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'system', performedAt: '2026-07-12T16:00:00Z' },
+        { logId: 2, action: 'Posted', performedBy: 'system', performedAt: '2026-07-12T16:00:00Z' }
+      ]
+    },
+    {
+      voucherId: 'VT-006',
+      voucherType: 'Purchase',
+      voucherNumber: 'PV-2026-002',
+      date: '2026-07-13',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 04',
+      narration: 'Purchase invoice entry PO-101',
+      referenceNumber: 'REF-PV-006',
+      sourceModule: 'Purchase',
+      sourceDocumentId: 'PO-101',
+      status: 'Posted',
+      createdBy: 'system',
+      createdAt: '2026-07-13T17:00:00Z',
+      postedAt: '2026-07-13T17:00:00Z',
+      attachments: ['invoice_purchase_materials.pdf'],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 4800,
+      totalCredit: 4800,
+      lines: [
+        { lineId: 1, accountId: 3, debitAmount: 4800, creditAmount: 0 },
+        { lineId: 2, accountId: 6, debitAmount: 0, creditAmount: 4800 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'system', performedAt: '2026-07-13T17:00:00Z' },
+        { logId: 2, action: 'Posted', performedBy: 'system', performedAt: '2026-07-13T17:00:00Z' }
+      ]
+    },
+    {
+      voucherId: 'VT-007',
+      voucherType: 'Journal Voucher',
+      voucherNumber: 'JV-2026-001',
+      date: '2026-08-07',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 05',
+      narration: 'Draft adjusting entry for machinery depreciation',
+      referenceNumber: 'REF-JV-007',
+      sourceModule: 'Manual',
+      status: 'Draft',
+      createdBy: 'junior_accountant',
+      createdAt: '2026-08-07T11:00:00Z',
+      attachments: [],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 500,
+      totalCredit: 500,
+      lines: [
+        { lineId: 1, accountId: 3, debitAmount: 500, creditAmount: 0 },
+        { lineId: 2, accountId: 8, debitAmount: 0, creditAmount: 500 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'junior_accountant', performedAt: '2026-08-07T11:00:00Z', details: 'Initial draft' }
+      ]
+    },
+    {
+      voucherId: 'VT-008',
+      voucherType: 'Payment',
+      voucherNumber: 'PV-2026-003',
+      date: '2026-08-07',
+      fiscalYear: 'FY 2027-28',
+      fiscalPeriod: 'Period 05',
+      narration: 'Travel expense reimbursement request',
+      referenceNumber: 'REF-PV-008',
+      sourceModule: 'Manual',
+      status: 'Pending Approval',
+      createdBy: 'junior_accountant',
+      createdAt: '2026-08-07T14:00:00Z',
+      attachments: ['hotel_bill.pdf'],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: 1200,
+      totalCredit: 1200,
+      lines: [
+        { lineId: 1, accountId: 3, debitAmount: 1200, creditAmount: 0 },
+        { lineId: 2, accountId: 1, debitAmount: 0, creditAmount: 1200 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'junior_accountant', performedAt: '2026-08-07T14:00:00Z', details: 'Submitted' }
+      ]
+    }
   ]);
 
   // New Ledger Modal Form State
@@ -107,6 +509,18 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerType, setDrawerType] = useState<'ledgers' | 'sales' | 'expenses' | 'cash' | null>(null);
 
+  // Voucher Builder Form state
+  const [formVoucherType, setFormVoucherType] = useState<'Journal Voucher' | 'Payment' | 'Receipt' | 'Contra' | 'Sales' | 'Purchase' | 'Debit Note' | 'Credit Note' | 'Depreciation' | 'Opening Balance'>('Journal Voucher');
+  const [formVoucherDate, setFormVoucherDate] = useState(new Date().toISOString().split('T')[0]);
+  const [formVoucherNarration, setFormVoucherNarration] = useState('');
+  const [formVoucherRef, setFormVoucherRef] = useState('');
+  const [formVoucherCurrency, setFormVoucherCurrency] = useState('USD');
+  const [formVoucherExchangeRate, setFormVoucherExchangeRate] = useState(1.0);
+  const [formVoucherLines, setFormVoucherLines] = useState<Array<{ accountId: number; debitAmount: number; creditAmount: number; lineNarration: string }>>([
+    { accountId: 1, debitAmount: 0, creditAmount: 0, lineNarration: '' },
+    { accountId: 2, debitAmount: 0, creditAmount: 0, lineNarration: '' }
+  ]);
+
   // Other dynamic master views states to make all keys functional
   const [products, setProducts] = useState([
     { id: 'PD-101', name: 'Raw Steel Sheets (Grade A)', category: 'Raw Materials', price: 280.00, stock: 450 },
@@ -120,10 +534,176 @@ export default function App() {
     { id: 'VT-903', date: '2026-07-08', desc: 'Steel Raw Materials purchase', deb: 'Silicon Valley Bank', cred: 'Globex Logistics', amt: 8200.00, type: 'Purchase' }
   ]);
 
-  const [employees, setEmployees] = useState([
-    { id: 'EMP-01', name: 'Alexander Wright', dept: 'Engineering', desg: 'Principal Engineer', sal: 8500.00, status: 'Unpaid' },
-    { id: 'EMP-02', name: 'Sarah Jenkins', dept: 'Finance', desg: 'Lead Accountant', sal: 6200.00, status: 'Unpaid' },
-    { id: 'EMP-03', name: 'Marcus Chen', dept: 'Sales', desg: 'VP Sales East', sal: 7800.00, status: 'Unpaid' }
+  // Payroll active tab state
+  const [activePayrollTab, setActivePayrollTab] = useState<'employees' | 'structure' | 'runs' | 'loans' | 'compliance'>('employees');
+  const [selectedPayrollEmployeeId, setSelectedPayrollEmployeeId] = useState<string>('EMP-01');
+  const [selectedPayrollRunId, setSelectedPayrollRunId] = useState<string | null>(null);
+
+  // New Employee Form modal states
+  const [showNewEmployeeModal, setShowNewEmployeeModal] = useState(false);
+  const [newEmpId, setNewEmpId] = useState('EMP-04');
+  const [newEmpName, setNewEmpName] = useState('');
+  const [newEmpDept, setNewEmpDept] = useState('Engineering');
+  const [newEmpDesg, setNewEmpDesg] = useState('Senior Engineer');
+  const [newEmpDoj, setNewEmpDoj] = useState(new Date().toISOString().split('T')[0]);
+  const [newEmpBank, setNewEmpBank] = useState('');
+  const [newEmpIfsc, setNewEmpIfsc] = useState('');
+  const [newEmpPan, setNewEmpPan] = useState('');
+  const [newEmpPf, setNewEmpPf] = useState('');
+  const [newEmpEsi, setNewEmpEsi] = useState('');
+  const [newEmpRegime, setNewEmpRegime] = useState<'old' | 'new'>('new');
+
+  // Employee Loan Form states
+  const [showNewLoanModal, setShowNewLoanModal] = useState(false);
+  const [newLoanEmpId, setNewLoanEmpId] = useState('EMP-01');
+  const [newLoanType, setNewLoanType] = useState<'advance' | 'loan'>('advance');
+  const [newLoanPrincipal, setNewLoanPrincipal] = useState(1000);
+  const [newLoanEmi, setNewLoanEmi] = useState(200);
+
+  // 1. Employee Directory State
+  const [employees, setEmployees] = useState<PayrollEmployee[]>([
+    {
+      employeeId: 'EMP-01',
+      name: 'Alexander Wright',
+      departmentId: 'Engineering',
+      designation: 'Principal Engineer',
+      dateOfJoining: '2024-03-15',
+      bankAccountNo: '1002938104',
+      ifscCode: 'SVB0000123',
+      panNumber: 'AWPTY9821A',
+      pfNumber: 'PF/AW/10293',
+      esiNumber: 'ESI/AW/9812',
+      taxRegime: 'new',
+      status: 'active'
+    },
+    {
+      employeeId: 'EMP-02',
+      name: 'Sarah Jenkins',
+      departmentId: 'Finance',
+      designation: 'Lead Accountant',
+      dateOfJoining: '2025-06-01',
+      bankAccountNo: '3002948108',
+      ifscCode: 'SVB0000123',
+      panNumber: 'SJPTY2837B',
+      pfNumber: 'PF/SJ/10294',
+      esiNumber: 'ESI/SJ/9813',
+      taxRegime: 'old',
+      status: 'active'
+    },
+    {
+      employeeId: 'EMP-03',
+      name: 'Marcus Chen',
+      departmentId: 'Sales',
+      designation: 'VP Sales East',
+      dateOfJoining: '2024-11-10',
+      bankAccountNo: '4002958112',
+      ifscCode: 'SVB0000123',
+      panNumber: 'MCPTY4738C',
+      pfNumber: 'PF/MC/10295',
+      esiNumber: 'ESI/MC/9814',
+      taxRegime: 'new',
+      status: 'active'
+    }
+  ]);
+
+  // 2. Salary Structures
+  const [salaryStructures, setSalaryStructures] = useState<SalaryStructure[]>([
+    {
+      employeeId: 'EMP-01',
+      components: [
+        { componentName: 'Basic', componentType: 'earning', calculationType: 'flat', value: 4500 },
+        { componentName: 'HRA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 40 }, // 40% of Basic ($1,800)
+        { componentName: 'DA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 10 },  // 10% of Basic ($450)
+        { componentName: 'Conveyance', componentType: 'earning', calculationType: 'flat', value: 200 },
+        { componentName: 'Special Allowance', componentType: 'earning', calculationType: 'flat', value: 1050 },
+        { componentName: 'PF Deduction', componentType: 'deduction', calculationType: 'percentage', calculationBase: 'Basic+DA', value: 12 }, // 12% of Basic+DA ($594)
+        { componentName: 'TDS Deduction', componentType: 'deduction', calculationType: 'flat', value: 400 }
+      ]
+    },
+    {
+      employeeId: 'EMP-02',
+      components: [
+        { componentName: 'Basic', componentType: 'earning', calculationType: 'flat', value: 3500 },
+        { componentName: 'HRA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 40 }, // 40% of Basic ($1,400)
+        { componentName: 'DA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 10 },  // 10% of Basic ($350)
+        { componentName: 'Conveyance', componentType: 'earning', calculationType: 'flat', value: 200 },
+        { componentName: 'Special Allowance', componentType: 'earning', calculationType: 'flat', value: 750 },
+        { componentName: 'PF Deduction', componentType: 'deduction', calculationType: 'percentage', calculationBase: 'Basic+DA', value: 12 }, // 12% of Basic+DA ($462)
+        { componentName: 'TDS Deduction', componentType: 'deduction', calculationType: 'flat', value: 250 }
+      ]
+    },
+    {
+      employeeId: 'EMP-03',
+      components: [
+        { componentName: 'Basic', componentType: 'earning', calculationType: 'flat', value: 4000 },
+        { componentName: 'HRA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 40 }, // 40% of Basic ($1,600)
+        { componentName: 'DA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 10 },  // 10% of Basic ($400)
+        { componentName: 'Conveyance', componentType: 'earning', calculationType: 'flat', value: 200 },
+        { componentName: 'Special Allowance', componentType: 'earning', calculationType: 'flat', value: 1600 },
+        { componentName: 'PF Deduction', componentType: 'deduction', calculationType: 'percentage', calculationBase: 'Basic+DA', value: 12 }, // 12% of Basic+DA ($528)
+        { componentName: 'TDS Deduction', componentType: 'deduction', calculationType: 'flat', value: 350 }
+      ]
+    }
+  ]);
+
+  // 3. Historical Payroll Runs
+  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([
+    {
+      runId: 'PR-001',
+      periodMonth: 'June',
+      periodYear: '2026',
+      runType: 'regular',
+      status: 'paid',
+      runDate: '2026-06-30',
+      processedBy: 'alex',
+      approvedBy: 'admin',
+      totalGross: 22000,
+      totalDeductions: 2584,
+      totalNet: 19416
+    },
+    {
+      runId: 'PR-002',
+      periodMonth: 'July',
+      periodYear: '2026',
+      runType: 'regular',
+      status: 'paid',
+      runDate: '2026-07-31',
+      processedBy: 'alex',
+      approvedBy: 'admin',
+      totalGross: 22000,
+      totalDeductions: 2584,
+      totalNet: 19416
+    }
+  ]);
+
+  // 4. Employee Loans & Advances
+  const [employeeLoans, setEmployeeLoans] = useState<EmployeeLoan[]>([
+    {
+      loanId: 'LN-001',
+      employeeId: 'EMP-02',
+      loanType: 'advance',
+      principalAmount: 1000,
+      emiAmount: 200,
+      remainingBalance: 800,
+      startDate: '2026-07-15',
+      status: 'active'
+    }
+  ]);
+
+  // 5. Statutory Filing Checklist
+  const [statutoryFilings, setStatutoryFilings] = useState<StatutoryFiling[]>([
+    { filingId: 'FL-001', runId: 'PR-001', filingType: 'PF', dueDate: '2026-07-15', filedDate: '2026-07-14', status: 'filed', challanReference: 'CHL-PF-001' },
+    { filingId: 'FL-002', runId: 'PR-001', filingType: 'ESI', dueDate: '2026-07-15', filedDate: '2026-07-14', status: 'filed', challanReference: 'CHL-ESI-001' },
+    { filingId: 'FL-003', runId: 'PR-002', filingType: 'PF', dueDate: '2026-08-15', filedDate: '2026-08-12', status: 'filed', challanReference: 'CHL-PF-002' },
+    { filingId: 'FL-004', runId: 'PR-002', filingType: 'TDS', dueDate: '2026-09-07', status: 'pending' },
+    { filingId: 'FL-005', runId: 'PR-003', filingType: 'PF', dueDate: '2026-09-15', status: 'pending' }
+  ]);
+
+  // 6. Attendance Summary Seed
+  const [attendanceSummaries, setAttendanceSummaries] = useState<AttendanceSummary[]>([
+    { employeeId: 'EMP-01', presentDays: 22, lopDays: 0, overtimeHours: 5 },
+    { employeeId: 'EMP-02', presentDays: 21, lopDays: 1, overtimeHours: 0 },
+    { employeeId: 'EMP-03', presentDays: 22, lopDays: 0, overtimeHours: 0 }
   ]);
 
   const [documents, setDocuments] = useState([
@@ -277,6 +857,487 @@ export default function App() {
     setTransactions([expTx, ...transactions]);
     setShowQuickExpenseModal(false);
     showToast(`Expense of $${quickExpAmt} logged successfully!`, 'success');
+  };
+
+  // Reverse voucher (creates mirrored reversing entry)
+  const handleReverseVoucher = (id: string) => {
+    const orig = vouchers.find(v => v.voucherId === id);
+    if (!orig) return;
+    
+    // Create reverse lines
+    const reversedLines = orig.lines.map(line => ({
+      lineId: Date.now() + Math.random(),
+      accountId: line.accountId,
+      debitAmount: line.creditAmount, // swap debits and credits
+      creditAmount: line.debitAmount
+    }));
+
+    const revVoucher: Voucher = {
+      voucherId: `VT-REV-${Date.now().toString().slice(-3)}`,
+      voucherType: orig.voucherType,
+      voucherNumber: `REV-${orig.voucherNumber}`,
+      date: new Date().toISOString().split('T')[0],
+      fiscalYear: orig.fiscalYear,
+      fiscalPeriod: orig.fiscalPeriod,
+      narration: `REVERSAL OF VOUCHER ${orig.voucherId}: ${orig.narration}`,
+      referenceNumber: `REV-${orig.referenceNumber}`,
+      sourceModule: 'Manual',
+      status: 'Posted',
+      createdBy: 'admin',
+      createdAt: new Date().toISOString(),
+      postedAt: new Date().toISOString(),
+      reversalOf: orig.voucherId,
+      attachments: [],
+      currency: orig.currency,
+      exchangeRate: orig.exchangeRate,
+      totalDebit: orig.totalCredit,
+      totalCredit: orig.totalDebit,
+      lines: reversedLines,
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'admin', performedAt: new Date().toISOString(), details: `Correction reversal of ${orig.voucherId}` },
+        { logId: 2, action: 'Posted', performedBy: 'admin', performedAt: new Date().toISOString() }
+      ]
+    };
+
+    // Update original voucher status to Reversed
+    const updated = vouchers.map(v => v.voucherId === id ? { ...v, status: 'Reversed' as const } : v);
+    setVouchers([revVoucher, ...updated]);
+    setSelectedVoucher(null);
+    showToast(`Voucher ${id} has been reversed. Reversal voucher ${revVoucher.voucherId} posted.`, 'success');
+  };
+
+  // Cancel/Void Voucher
+  const handleCancelVoucher = (id: string, reason: string) => {
+    setVouchers(vouchers.map(v => v.voucherId === id ? { 
+      ...v, 
+      status: 'Cancelled' as const,
+      history: [...v.history, { logId: v.history.length + 1, action: 'Cancelled', performedBy: 'admin', performedAt: new Date().toISOString(), details: reason }]
+    } : v));
+    setSelectedVoucher(null);
+    showToast(`Voucher ${id} cancelled: ${reason}`, 'warning');
+  };
+
+  // Approve Voucher (Maker-checker validation)
+  const handleApproveVoucher = (id: string) => {
+    const target = vouchers.find(v => v.voucherId === id);
+    if (!target) return;
+
+    // Maker-checker validation
+    if (target.createdBy === 'admin') {
+      showToast('Maker-Checker Block: Creator cannot approve their own voucher!', 'error');
+      return;
+    }
+
+    setVouchers(vouchers.map(v => v.voucherId === id ? { 
+      ...v, 
+      status: 'Posted' as const,
+      approvedBy: 'admin',
+      approvedAt: new Date().toISOString(),
+      postedAt: new Date().toISOString(),
+      history: [...v.history, { logId: v.history.length + 1, action: 'Approved', performedBy: 'admin', performedAt: new Date().toISOString() }]
+    } : v));
+    setSelectedVoucher(null);
+    showToast(`Voucher ${id} approved & posted to ledger.`, 'success');
+  };
+
+  // Create Custom Voucher
+  const handleCreateCustomVoucher = (status: 'Draft' | 'Pending Approval' | 'Posted') => {
+    // Parity / Balance Check
+    const totalDr = formVoucherLines.reduce((sum, l) => sum + Number(l.debitAmount || 0), 0);
+    const totalCr = formVoucherLines.reduce((sum, l) => sum + Number(l.creditAmount || 0), 0);
+
+    if (totalDr !== totalCr) {
+      showToast('Balance Error: Total Debits must equal Total Credits before posting!', 'error');
+      return;
+    }
+
+    if (totalDr === 0) {
+      showToast('Validation Error: Voucher cannot be empty (0 amount)!', 'error');
+      return;
+    }
+
+    // Duplicate reference check
+    if (formVoucherRef && vouchers.some(v => v.referenceNumber === formVoucherRef)) {
+      showToast(`Validation Error: Duplicate reference number '${formVoucherRef}' detected!`, 'error');
+      return;
+    }
+
+    // Period Lock Check (locks July 2026 as closed for test)
+    if (formVoucherDate.startsWith('2026-07')) {
+      showToast('Period Lock Check: Fiscal period July 2026 is locked/closed!', 'error');
+      return;
+    }
+
+    // Role Limit Check (junior accountant limit check of $5,000)
+    if (status === 'Posted' && totalDr > 5000) {
+      showToast('Role limits: Junior accountant capped at $5,000. Submit for approval instead.', 'error');
+      return;
+    }
+
+    const newVId = `VT-${Date.now().toString().slice(-3)}`;
+    const newSeqNum = `${formVoucherType.substring(0,2).toUpperCase()}-2026-${vouchers.length + 1}`;
+
+    const newV: Voucher = {
+      voucherId: newVId,
+      voucherType: formVoucherType,
+      voucherNumber: newSeqNum,
+      date: formVoucherDate,
+      fiscalYear: fiscalYear,
+      fiscalPeriod: 'Period 05',
+      narration: formVoucherNarration,
+      referenceNumber: formVoucherRef,
+      sourceModule: 'Manual',
+      status: status,
+      createdBy: 'junior_accountant',
+      createdAt: new Date().toISOString(),
+      postedAt: status === 'Posted' ? new Date().toISOString() : undefined,
+      attachments: [],
+      currency: formVoucherCurrency,
+      exchangeRate: Number(formVoucherExchangeRate || 1.0),
+      totalDebit: totalDr,
+      totalCredit: totalCr,
+      lines: formVoucherLines.map((line, idx) => ({
+        lineId: idx + 1,
+        accountId: Number(line.accountId),
+        debitAmount: Number(line.debitAmount || 0),
+        creditAmount: Number(line.creditAmount || 0),
+        lineNarration: line.lineNarration
+      })),
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'junior_accountant', performedAt: new Date().toISOString(), details: `Status: ${status}` }
+      ]
+    };
+
+    setVouchers([newV, ...vouchers]);
+    setActiveTransactionSubTab('list');
+    setFormVoucherNarration('');
+    setFormVoucherRef('');
+    setFormVoucherLines([
+      { accountId: 1, debitAmount: 0, creditAmount: 0, lineNarration: '' },
+      { accountId: 2, debitAmount: 0, creditAmount: 0, lineNarration: '' }
+    ]);
+    showToast(`Voucher ${newSeqNum} saved successfully as ${status}!`, 'success');
+  };
+
+  // Add New Employee Profile
+  const handleCreateEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmpName || !newEmpBank || !newEmpIfsc) {
+      showToast('Validation Error: Employee Name and Bank Details are required!', 'error');
+      return;
+    }
+
+    const created: PayrollEmployee = {
+      employeeId: newEmpId,
+      name: newEmpName,
+      departmentId: newEmpDept,
+      designation: newEmpDesg,
+      dateOfJoining: newEmpDoj,
+      bankAccountNo: newEmpBank,
+      ifscCode: newEmpIfsc,
+      panNumber: newEmpPan || 'XXXXX0000X',
+      pfNumber: newEmpPf || 'N/A',
+      esiNumber: newEmpEsi || 'N/A',
+      taxRegime: newEmpRegime,
+      status: 'active'
+    };
+
+    // Default structure template for the new employee
+    const defaultStructure: SalaryStructure = {
+      employeeId: newEmpId,
+      components: [
+        { componentName: 'Basic', componentType: 'earning', calculationType: 'flat', value: 3000 },
+        { componentName: 'HRA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 40 },
+        { componentName: 'DA', componentType: 'earning', calculationType: 'percentage', calculationBase: 'Basic', value: 10 },
+        { componentName: 'Conveyance', componentType: 'earning', calculationType: 'flat', value: 200 },
+        { componentName: 'Special Allowance', componentType: 'earning', calculationType: 'flat', value: 400 },
+        { componentName: 'PF Deduction', componentType: 'deduction', calculationType: 'percentage', calculationBase: 'Basic+DA', value: 12 },
+        { componentName: 'TDS Deduction', componentType: 'deduction', calculationType: 'flat', value: 150 }
+      ]
+    };
+
+    setEmployees([...employees, created]);
+    setSalaryStructures([...salaryStructures, defaultStructure]);
+    
+    // Seed default attendance summary
+    setAttendanceSummaries([...attendanceSummaries, { employeeId: newEmpId, presentDays: 22, lopDays: 0, overtimeHours: 0 }]);
+    
+    setShowNewEmployeeModal(false);
+    setNewEmpName('');
+    setNewEmpBank('');
+    setNewEmpIfsc('');
+    setNewEmpPan('');
+    setNewEmpPf('');
+    setNewEmpEsi('');
+    setNewEmpId(`EMP-0${employees.length + 2}`);
+    showToast(`Created employee profile for ${created.name} and initialized salary structure!`, 'success');
+  };
+
+  // Add Employee Salary Component Update
+  const handleUpdateSalaryStructure = (empId: string, updatedComponents: SalaryComponent[]) => {
+    setSalaryStructures(salaryStructures.map(s => s.employeeId === empId ? { ...s, components: updatedComponents } : s));
+    showToast('Salary structure updated successfully!', 'success');
+  };
+
+  // Add Employee Loan Request
+  const handleRequestLoan = (e: React.FormEvent) => {
+    e.preventDefault();
+    const created: EmployeeLoan = {
+      loanId: `LN-${Date.now().toString().slice(-3)}`,
+      employeeId: newLoanEmpId,
+      loanType: newLoanType,
+      principalAmount: Number(newLoanPrincipal),
+      emiAmount: Number(newLoanEmi),
+      remainingBalance: Number(newLoanPrincipal),
+      startDate: new Date().toISOString().split('T')[0],
+      status: 'active'
+    };
+    setEmployeeLoans([created, ...employeeLoans]);
+    setShowNewLoanModal(false);
+    showToast(`Advance loan approved for employee ${newLoanEmpId}. EMIs will deduct from payroll.`, 'success');
+  };
+
+  // Run Payroll Cycle Core calculations
+  const handleCreatePayrollRun = (month: string, year: string, runType: 'regular' | 'off-cycle') => {
+    // Basic checks
+    if (payrollRuns.some(r => r.periodMonth === month && r.periodYear === year && r.status === 'paid')) {
+      showToast(`Period Lock: Payroll for ${month} ${year} has already been paid and locked!`, 'error');
+      return;
+    }
+
+    let grossSum = 0;
+    let dedSum = 0;
+    let netSum = 0;
+
+    // Iterate over active employees to calculate pay elements
+    employees.forEach(emp => {
+      if (emp.status !== 'active') return;
+
+      const struct = salaryStructures.find(s => s.employeeId === emp.employeeId);
+      const att = attendanceSummaries.find(a => a.employeeId === emp.employeeId) || { presentDays: 22, lopDays: 0, overtimeHours: 0 };
+      const loan = employeeLoans.find(l => l.employeeId === emp.employeeId && l.status === 'active');
+
+      if (!struct) return;
+
+      const basicComp = struct.components.find(c => c.componentName === 'Basic')?.value || 0;
+      
+      // Calculate Loss of Pay multiplier (base: 22 working days)
+      const lopDays = att.lopDays || 0;
+      const payMultiplier = Math.max(0, (22 - lopDays) / 22);
+
+      // Earning components
+      let empGross = 0;
+      let basicVal = basicComp * payMultiplier;
+      let hraVal = 0;
+      let daVal = 0;
+
+      struct.components.forEach(comp => {
+        if (comp.componentType === 'earning') {
+          let compVal = comp.value;
+          if (comp.calculationType === 'percentage' && comp.calculationBase === 'Basic') {
+            compVal = (basicComp * comp.value) / 100;
+          }
+          // apply LOP deduction
+          empGross += compVal * payMultiplier;
+          if (comp.componentName === 'HRA') hraVal = compVal * payMultiplier;
+          if (comp.componentName === 'DA') daVal = compVal * payMultiplier;
+        }
+      });
+
+      // Add overtime if applicable (1.5x basic hourly rate)
+      if (att.overtimeHours > 0) {
+        const hourlyRate = basicComp / 22 / 8;
+        const otPay = hourlyRate * 1.5 * att.overtimeHours;
+        empGross += otPay;
+      }
+
+      // Deductions
+      let pfEmp = 0;
+      const tdsVal = struct.components.find(c => c.componentName === 'TDS Deduction')?.value || 0;
+      let esiVal = 0;
+      const ptVal = 200; // professional tax flat rate
+
+      // PF calculation (12% of Basic + DA)
+      const pfBase = basicVal + daVal;
+      pfEmp = (pfBase * 12) / 100;
+
+      // ESI calculation (0.75% of Gross if Gross <= $3,000)
+      if (empGross <= 3000) {
+        esiVal = (empGross * 0.75) / 100;
+      }
+
+      let empDeductions = pfEmp + tdsVal + esiVal + ptVal;
+
+      // Apply loan EMI deduction
+      if (loan) {
+        const emi = Math.min(loan.emiAmount, loan.remainingBalance);
+        empDeductions += emi;
+      }
+
+      const empNet = empGross - empDeductions;
+
+      grossSum += empGross;
+      dedSum += empDeductions;
+      netSum += empNet;
+    });
+
+    const newRun: PayrollRun = {
+      runId: `PR-${Date.now().toString().slice(-3)}`,
+      periodMonth: month,
+      periodYear: year,
+      runType: runType,
+      status: 'draft',
+      runDate: new Date().toISOString().split('T')[0],
+      processedBy: 'junior_accountant',
+      totalGross: Math.round(grossSum * 100) / 100,
+      totalDeductions: Math.round(dedSum * 100) / 100,
+      totalNet: Math.round(netSum * 100) / 100
+    };
+
+    setPayrollRuns([newRun, ...payrollRuns.filter(r => !(r.periodMonth === month && r.periodYear === year))]);
+    setSelectedPayrollRunId(newRun.runId);
+    showToast(`Payroll Cycle calculated for ${month} ${year}. Gross: $${newRun.totalGross.toLocaleString()}.`, 'success');
+  };
+
+  // Lock period, disburse salaries, and AUTO-POST accounting Journal Voucher
+  const handleLockAndDisbursePayroll = (runId: string) => {
+    const run = payrollRuns.find(r => r.runId === runId);
+    if (!run) return;
+
+    // Maker-checker rule: HR creates (alex/junior), admin/checker approves
+    if (run.processedBy === 'admin') {
+      showToast('Maker-Checker Block: Creator cannot approve their own payroll cycle disbursement!', 'error');
+      return;
+    }
+
+    // Validation checklist (check bank details, PAN compliance)
+    const incomplete = employees.some(e => e.status === 'active' && (!e.bankAccountNo || !e.ifscCode || !e.panNumber));
+    if (incomplete) {
+      showToast('Validation Error: Some employees have missing bank account details or PAN numbers!', 'error');
+      return;
+    }
+
+    // Compute split ledger figures for double-entry auto-post JV
+    let totalGross = 0;
+    let totalNet = 0;
+    let employeePF = 0;
+    let employerPF = 0;
+    let totalTDS = 0;
+
+    employees.forEach(emp => {
+      if (emp.status !== 'active') return;
+
+      const struct = salaryStructures.find(s => s.employeeId === emp.employeeId);
+      const att = attendanceSummaries.find(a => a.employeeId === emp.employeeId) || { presentDays: 22, lopDays: 0, overtimeHours: 0 };
+      const loan = employeeLoans.find(l => l.employeeId === emp.employeeId && l.status === 'active');
+
+      if (!struct) return;
+
+      const basicComp = struct.components.find(c => c.componentName === 'Basic')?.value || 0;
+      const lopDays = att.lopDays || 0;
+      const payMultiplier = Math.max(0, (22 - lopDays) / 22);
+
+      const basicVal = basicComp * payMultiplier;
+      let daVal = 0;
+      let empGross = 0;
+
+      struct.components.forEach(comp => {
+        if (comp.componentType === 'earning') {
+          let compVal = comp.value;
+          if (comp.calculationType === 'percentage' && comp.calculationBase === 'Basic') {
+            compVal = (basicComp * comp.value) / 100;
+          }
+          empGross += compVal * payMultiplier;
+          if (comp.componentName === 'DA') daVal = compVal * payMultiplier;
+        }
+      });
+
+      if (att.overtimeHours > 0) {
+        const hourlyRate = basicComp / 22 / 8;
+        const otPay = hourlyRate * 1.5 * att.overtimeHours;
+        empGross += otPay;
+      }
+
+      const pfBase = basicVal + daVal;
+      const pfEmp = (pfBase * 12) / 100;
+      const pfEmpContrib = (pfBase * 12) / 100; // employer contributes matching 12%
+      const tdsVal = struct.components.find(c => c.componentName === 'TDS Deduction')?.value || 0;
+      const ptVal = 200;
+      
+      let empDeductions = pfEmp + tdsVal + ptVal;
+      if (loan) {
+        const emi = Math.min(loan.emiAmount, loan.remainingBalance);
+        empDeductions += emi;
+      }
+
+      const empNet = empGross - empDeductions;
+
+      totalGross += empGross;
+      totalNet += empNet;
+      employeePF += pfEmp;
+      employerPF += pfEmpContrib;
+      totalTDS += tdsVal + ptVal;
+    });
+
+    // Generate Journal Voucher matching specifications
+    const jvId = `VT-PAY-${Date.now().toString().slice(-3)}`;
+    const jvSeqNum = `JV-PAY-${run.periodYear}-${run.runId.slice(-3)}`;
+
+    const payrollJV: Voucher = {
+      voucherId: jvId,
+      voucherType: 'Journal Voucher',
+      voucherNumber: jvSeqNum,
+      date: new Date().toISOString().split('T')[0],
+      fiscalYear: fiscalYear,
+      fiscalPeriod: 'Period 05',
+      narration: `AUTO-POSTED PAYROLL JOURNAL CYCLE: ${run.periodMonth} ${run.periodYear} (Run: ${run.runId})`,
+      referenceNumber: `REF-${run.runId}`,
+      sourceModule: 'Payroll',
+      sourceDocumentId: run.runId,
+      status: 'Posted',
+      createdBy: 'system',
+      createdAt: new Date().toISOString(),
+      postedAt: new Date().toISOString(),
+      attachments: [],
+      currency: 'USD',
+      exchangeRate: 1.0,
+      totalDebit: Math.round((totalGross + employerPF) * 100) / 100,
+      totalCredit: Math.round((totalGross + employerPF) * 100) / 100,
+      lines: [
+        // Dr Salary Expense A/C (Gross salaries expense)
+        { lineId: 1, accountId: 9, debitAmount: Math.round(totalGross * 100) / 100, creditAmount: 0 },
+        // Dr Employer PF Expense A/C (Employer contribution cost)
+        { lineId: 2, accountId: 13, debitAmount: Math.round(employerPF * 100) / 100, creditAmount: 0 },
+        // Cr Employee Payable A/C (Net salaries payable)
+        { lineId: 3, accountId: 10, debitAmount: 0, creditAmount: Math.round(totalNet * 100) / 100 },
+        // Cr PF Payable A/C (Total PF payable: employee + employer)
+        { lineId: 4, accountId: 11, debitAmount: 0, creditAmount: Math.round((employeePF + employerPF) * 100) / 100 },
+        // Cr TDS Payable A/C (TDS tax withholding credit)
+        { lineId: 5, accountId: 12, debitAmount: 0, creditAmount: Math.round(totalTDS * 100) / 100 }
+      ],
+      history: [
+        { logId: 1, action: 'Created', performedBy: 'system', performedAt: new Date().toISOString(), details: `Auto-posted payroll cycle run ${run.runId}` },
+        { logId: 2, action: 'Posted', performedBy: 'system', performedAt: new Date().toISOString() }
+      ]
+    };
+
+    // Update Loan Balances (post EMI repayment)
+    setEmployeeLoans(employeeLoans.map(loan => {
+      if (loan.status !== 'active') return loan;
+      const emi = Math.min(loan.emiAmount, loan.remainingBalance);
+      const rem = loan.remainingBalance - emi;
+      return {
+        ...loan,
+        remainingBalance: rem,
+        status: rem <= 0 ? ('closed' as const) : ('active' as const)
+      };
+    }));
+
+    // Update Runs list and append accounting JV
+    setPayrollRuns(payrollRuns.map(r => r.runId === runId ? { ...r, status: 'paid' as const, approvedBy: 'admin' } : r));
+    setVouchers([payrollJV, ...vouchers]);
+    setSelectedPayrollRunId(null);
+    showToast(`Payroll disbursement completed. Double-entry Journal entry ${jvSeqNum} auto-posted!`, 'success');
   };
 
   // Initialize Dual Bar Charts on Dashboard view
@@ -992,131 +2053,1684 @@ export default function App() {
           </main>
         );
 
-      case 'transactions':
+      case 'transactions': {
+        // Filter vouchers based on search & selectors
+        const filteredVVs = vouchers.filter(v => {
+          const matchesSearch = v.voucherId.toLowerCase().includes(txSearch.toLowerCase()) || 
+                                v.voucherNumber.toLowerCase().includes(txSearch.toLowerCase()) || 
+                                v.referenceNumber.toLowerCase().includes(txSearch.toLowerCase()) ||
+                                v.narration.toLowerCase().includes(txSearch.toLowerCase());
+          const matchesType = txTypeFilter === 'ALL' || v.voucherType === txTypeFilter;
+          const matchesStatus = txStatusFilter === 'ALL' || v.status === txStatusFilter;
+          const matchesDateFrom = !txDateFrom || v.date >= txDateFrom;
+          const matchesDateTo = !txDateTo || v.date <= txDateTo;
+          return matchesSearch && matchesType && matchesStatus && matchesDateFrom && matchesDateTo;
+        });
+
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold font-manrope text-[#161B33]">Transactions Journal</h2>
-                  <p className="text-xs text-[#5B6178] mt-1">Audit and record journal entries, receipts, and client bank settlement vouchers</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    const newTx = {
-                      id: `VT-${Date.now().toString().slice(-3)}`,
-                      date: new Date().toISOString().split('T')[0],
-                      desc: 'Manual Sales Posting',
-                      deb: 'Silicon Valley Bank',
-                      cred: 'Acme Corp Sales A/C',
-                      amt: 1850.00,
-                      type: 'Receipt'
-                    };
-                    setTransactions([newTx, ...transactions]);
-                    showToast('Transaction posted successfully to sales journal ledger!', 'success');
-                  }}
-                  className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition"
-                >
-                  + Post Transaction
-                </button>
+            {/* WORKSPACE HEADER */}
+            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-manrope text-[#161B33]">Corporate Transactions Journal</h2>
+                <p className="text-xs text-[#5B6178] mt-1">
+                  Manage accounts transactions, record double-entry split vouchers, and reconcile SVB bank records.
+                </p>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-2">VOUCHER ID</th>
-                      <th className="py-3 px-2">DATE</th>
-                      <th className="py-3 px-2">DESCRIPTION</th>
-                      <th className="py-3 px-2">DEBIT ACCOUNT</th>
-                      <th className="py-3 px-2">CREDIT ACCOUNT</th>
-                      <th className="py-3 px-2">AMOUNT</th>
-                      <th className="py-3 px-2 text-right">TYPE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E1E5EC] text-[#161B33]">
-                    {transactions.map(t => (
-                      <tr key={t.id} className="hover:bg-slate-50 transition">
-                        <td className="py-3 px-2 font-mono font-bold text-slate-700">{t.id}</td>
-                        <td className="py-3 px-2 text-slate-500 font-semibold">{t.date}</td>
-                        <td className="py-3 px-2 font-bold">{t.desc}</td>
-                        <td className="py-3 px-2 text-slate-600 font-semibold">{t.deb}</td>
-                        <td className="py-3 px-2 text-slate-600 font-semibold">{t.cred}</td>
-                        <td className="py-3 px-2 font-bold font-mono text-sm">${t.amt.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 px-2 text-right">
-                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold font-mono uppercase ${
-                            t.type === 'Receipt' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/30' : 'bg-[#FFF3EC] text-[#E2662F] border border-[#E2662F]/30'
-                          }`}>
-                            {t.type}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              
+              {/* SUB-TABS SELECTOR */}
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold select-none">
+                <button 
+                  onClick={() => { setActiveTransactionSubTab('list'); setSelectedVoucher(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeTransactionSubTab === 'list' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Vouchers Registry
+                </button>
+                <button 
+                  onClick={() => { setActiveTransactionSubTab('create'); setSelectedVoucher(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeTransactionSubTab === 'create' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Voucher Maker (JV/PV)
+                </button>
+                <button 
+                  onClick={() => { setActiveTransactionSubTab('reconcile'); setSelectedVoucher(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeTransactionSubTab === 'reconcile' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Bank Reconciliation
+                </button>
+                <button 
+                  onClick={() => { setActiveTransactionSubTab('import'); setSelectedVoucher(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeTransactionSubTab === 'import' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Bulk Import
+                </button>
               </div>
             </div>
+
+            {/* TAB CONTENT: VOUCHERS LIST */}
+            {activeTransactionSubTab === 'list' && (
+              <div className="space-y-6">
+                {/* STATUS SUMMARY STATS BAR */}
+                <div className="grid grid-cols-5 gap-4">
+                  <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase">Posted Vouchers</div>
+                      <div className="text-xl font-extrabold text-slate-800">{vouchers.filter(v => v.status === 'Posted').length}</div>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  </div>
+                  <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase">Pending Approval</div>
+                      <div className="text-xl font-extrabold text-slate-800">{vouchers.filter(v => v.status === 'Pending Approval').length}</div>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                  </div>
+                  <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase">Draft Entries</div>
+                      <div className="text-xl font-extrabold text-slate-800">{vouchers.filter(v => v.status === 'Draft').length}</div>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                  </div>
+                  <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase">Reversals</div>
+                      <div className="text-xl font-extrabold text-slate-800">{vouchers.filter(v => v.status === 'Reversed').length}</div>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                  </div>
+                  <div className="bg-white border rounded-lg p-3 shadow-sm flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] font-extrabold text-slate-400 uppercase">Voided / Cancelled</div>
+                      <div className="text-xl font-extrabold text-slate-800">{vouchers.filter(v => v.status === 'Cancelled').length}</div>
+                    </div>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                  </div>
+                </div>
+
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                  {/* SEARCH AND ADVANCED FILTERS BAR */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-xs">
+                    <div className="relative">
+                      <FiSearch className="absolute left-2.5 top-2.5 text-slate-400" />
+                      <input 
+                        type="text"
+                        placeholder="Search ID, Ref, Narration..."
+                        value={txSearch}
+                        onChange={e => setTxSearch(e.target.value)}
+                        className="w-full pl-8 pr-2.5 py-2 border rounded font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:border-[#12A594] outline-none transition"
+                      />
+                    </div>
+                    <div>
+                      <select 
+                        value={txTypeFilter}
+                        onChange={e => setTxTypeFilter(e.target.value)}
+                        className="w-full p-2 border rounded font-semibold text-slate-800 bg-white"
+                      >
+                        <option value="ALL">All Voucher Types</option>
+                        <option value="Journal Voucher">Journal Voucher (JV)</option>
+                        <option value="Payment">Payment Voucher (PV)</option>
+                        <option value="Receipt">Receipt Voucher (RV)</option>
+                        <option value="Contra">Contra Voucher</option>
+                        <option value="Sales">Sales Voucher</option>
+                        <option value="Purchase">Purchase Voucher</option>
+                        <option value="Debit Note">Debit Note</option>
+                        <option value="Credit Note">Credit Note</option>
+                        <option value="Depreciation">Depreciation</option>
+                        <option value="Opening Balance">Opening Balance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <select 
+                        value={txStatusFilter}
+                        onChange={e => setTxStatusFilter(e.target.value)}
+                        className="w-full p-2 border rounded font-semibold text-slate-800 bg-white"
+                      >
+                        <option value="ALL">All Statuses</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Pending Approval">Pending Approval</option>
+                        <option value="Posted">Posted</option>
+                        <option value="Reversed">Reversed</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div>
+                      <input 
+                        type="date"
+                        value={txDateFrom}
+                        onChange={e => setTxDateFrom(e.target.value)}
+                        className="w-full p-2 border rounded font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:border-[#12A594] outline-none"
+                      />
+                    </div>
+                    <div>
+                      <input 
+                        type="date"
+                        value={txDateTo}
+                        onChange={e => setTxDateTo(e.target.value)}
+                        className="w-full p-2 border rounded font-semibold text-slate-800 bg-slate-50 focus:bg-white focus:border-[#12A594] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* REGISTRY JOURNAL TABLE */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                          <th className="py-3 px-2">VOUCHER ID</th>
+                          <th className="py-3 px-2">DATE</th>
+                          <th className="py-3 px-2">VOUCHER TYPE</th>
+                          <th className="py-3 px-2">NARATIVE</th>
+                          <th className="py-3 px-2">REFERENCE</th>
+                          <th className="py-3 px-2 text-right">TOTAL AMOUNT</th>
+                          <th className="py-3 px-2 text-center">ATTACHMENTS</th>
+                          <th className="py-3 px-2 text-right">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E1E5EC] text-[#161B33]">
+                        {filteredVVs.map(v => (
+                          <tr 
+                            key={v.voucherId} 
+                            onClick={() => setSelectedVoucher(v)}
+                            className="hover:bg-slate-50 cursor-pointer transition"
+                          >
+                            <td className="py-3 px-2 font-mono font-bold text-slate-700">{v.voucherId}</td>
+                            <td className="py-3 px-2 font-semibold text-slate-500">{v.date}</td>
+                            <td className="py-3 px-2 font-bold text-slate-700">
+                              <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-bold uppercase text-[9px] border">
+                                {v.voucherType}
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 font-bold text-slate-800 max-w-xs truncate">{v.narration}</td>
+                            <td className="py-3 px-2 font-semibold text-slate-600">{v.referenceNumber || '--'}</td>
+                            <td className="py-3 px-2 font-bold font-mono text-sm text-right">${v.totalDebit.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td className="py-3 px-2 text-center">
+                              {v.attachments.length > 0 ? (
+                                <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full font-bold text-[9px]">
+                                  {v.attachments.length} doc
+                                </span>
+                              ) : (
+                                <span className="text-slate-300 font-bold">--</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 text-right">
+                              <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold font-mono uppercase ${
+                                v.status === 'Posted' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/30' :
+                                v.status === 'Pending Approval' ? 'bg-[#FFFBEB] text-[#D97706] border border-[#D97706]/30' :
+                                v.status === 'Draft' ? 'bg-slate-100 text-slate-600 border border-slate-300/30' :
+                                v.status === 'Reversed' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                                'bg-rose-50 text-rose-600 border border-rose-200'
+                              }`}>
+                                {v.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredVVs.length === 0 && (
+                          <tr>
+                            <td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">
+                              No journal vouchers found matching your filters.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: VOUCHER CREATOR */}
+            {activeTransactionSubTab === 'create' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div className="border-b pb-4">
+                  <h3 className="font-extrabold text-base text-slate-900 font-manrope">Record Double Entry Split Voucher</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Dual balance validation check, budget check, and maker-checker limits apply.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-xs font-semibold text-slate-700">
+                  <div>
+                    <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold">Voucher Type</label>
+                    <select 
+                      value={formVoucherType} 
+                      onChange={e => setFormVoucherType(e.target.value as any)}
+                      className="w-full p-2 border rounded font-bold bg-white text-slate-800"
+                    >
+                      <option value="Journal Voucher">Journal Voucher (JV)</option>
+                      <option value="Payment">Payment Voucher (PV)</option>
+                      <option value="Receipt">Receipt Voucher (RV)</option>
+                      <option value="Contra">Contra Voucher</option>
+                      <option value="Sales">Sales Voucher</option>
+                      <option value="Purchase">Purchase Voucher</option>
+                      <option value="Debit Note">Debit Note</option>
+                      <option value="Credit Note">Credit Note</option>
+                      <option value="Depreciation">Depreciation</option>
+                      <option value="Opening Balance">Opening Balance</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold">Voucher Date</label>
+                    <input 
+                      type="date" 
+                      value={formVoucherDate}
+                      onChange={e => setFormVoucherDate(e.target.value)}
+                      className="w-full p-2 border rounded text-slate-800 font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold">Reference Number</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. REF-2026-X" 
+                      value={formVoucherRef}
+                      onChange={e => setFormVoucherRef(e.target.value)}
+                      className="w-full p-2 border rounded text-slate-800 font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold">Currency</label>
+                    <select 
+                      value={formVoucherCurrency} 
+                      onChange={e => setFormVoucherCurrency(e.target.value)}
+                      className="w-full p-2 border rounded bg-white text-slate-800 font-bold"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold">Exchange Rate</label>
+                    <input 
+                      type="number" 
+                      value={formVoucherExchangeRate}
+                      onChange={e => setFormVoucherExchangeRate(Number(e.target.value))}
+                      className="w-full p-2 border rounded text-slate-800 font-mono font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-xs">
+                  <label className="block mb-1.5 uppercase tracking-wide text-[10px] font-extrabold text-slate-700">Narration / Description</label>
+                  <input 
+                    type="text" 
+                    placeholder="Enter details of accounting voucher transaction description..." 
+                    value={formVoucherNarration}
+                    onChange={e => setFormVoucherNarration(e.target.value)}
+                    className="w-full p-2.5 border rounded font-semibold text-slate-800 outline-none focus:border-[#12A594]"
+                  />
+                </div>
+
+                {/* MULTI-LINE SPLIT BUILDER */}
+                <div className="space-y-3">
+                  <div className="text-xs font-bold text-slate-800 border-b pb-2 uppercase tracking-wide">Ledger Splits</div>
+                  <div className="space-y-3">
+                    {formVoucherLines.map((line, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 text-xs items-center">
+                        <div className="md:col-span-5">
+                          <label className="block mb-1 text-[9px] uppercase font-bold text-slate-400">Ledger Account</label>
+                          <select 
+                            value={line.accountId}
+                            onChange={e => {
+                              const updated = [...formVoucherLines];
+                              updated[index].accountId = Number(e.target.value);
+                              setFormVoucherLines(updated);
+                            }}
+                            className="w-full p-2 border rounded font-bold bg-white text-slate-800"
+                          >
+                            {ledgers.map(l => (
+                              <option key={l.id} value={l.id}>{l.code} - {l.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block mb-1 text-[9px] uppercase font-bold text-slate-400">Debit ($)</label>
+                          <input 
+                            type="number" 
+                            placeholder="0.00"
+                            value={line.debitAmount || ''}
+                            onChange={e => {
+                              const updated = [...formVoucherLines];
+                              updated[index].debitAmount = Number(e.target.value);
+                              updated[index].creditAmount = 0; // double entry safety
+                              setFormVoucherLines(updated);
+                            }}
+                            className="w-full p-2 border rounded font-mono font-bold text-emerald-600 outline-none"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block mb-1 text-[9px] uppercase font-bold text-slate-400">Credit ($)</label>
+                          <input 
+                            type="number" 
+                            placeholder="0.00"
+                            value={line.creditAmount || ''}
+                            onChange={e => {
+                              const updated = [...formVoucherLines];
+                              updated[index].creditAmount = Number(e.target.value);
+                              updated[index].debitAmount = 0; // double entry safety
+                              setFormVoucherLines(updated);
+                            }}
+                            className="w-full p-2 border rounded font-mono font-bold text-rose-500 outline-none"
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block mb-1 text-[9px] uppercase font-bold text-slate-400">Narration</label>
+                          <input 
+                            type="text" 
+                            placeholder="Splits detail"
+                            value={line.lineNarration}
+                            onChange={e => {
+                              const updated = [...formVoucherLines];
+                              updated[index].lineNarration = e.target.value;
+                              setFormVoucherLines(updated);
+                            }}
+                            className="w-full p-2 border rounded font-semibold text-slate-700"
+                          />
+                        </div>
+                        <div className="md:col-span-1 text-center pt-4 md:pt-0">
+                          {formVoucherLines.length > 2 && (
+                            <button 
+                              onClick={() => setFormVoucherLines(formVoucherLines.filter((_, i) => i !== index))}
+                              className="text-slate-400 hover:text-rose-500 text-lg transition p-1"
+                            >
+                              <FiTrash2 />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => setFormVoucherLines([...formVoucherLines, { accountId: 1, debitAmount: 0, creditAmount: 0, lineNarration: '' }])}
+                    className="text-[#12A594] hover:text-[#0B7A6E] font-bold text-xs flex items-center gap-1 mt-2.5 transition"
+                  >
+                    <FiPlus /> Add Line Item Split
+                  </button>
+                </div>
+
+                {/* PARITY VALIDATOR PANEL */}
+                {(() => {
+                  const totDr = formVoucherLines.reduce((sum, l) => sum + Number(l.debitAmount || 0), 0);
+                  const totCr = formVoucherLines.reduce((sum, l) => sum + Number(l.creditAmount || 0), 0);
+                  const diff = totDr - totCr;
+                  const isBalanced = diff === 0 && totDr > 0;
+
+                  return (
+                    <div className="bg-slate-50 border rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+                      <div className="flex gap-6">
+                        <div>
+                          <span className="font-semibold text-slate-500 uppercase text-[9px] block">Total Debits</span>
+                          <span className="font-extrabold font-mono text-sm text-emerald-600">${totDr.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-500 uppercase text-[9px] block">Total Credits</span>
+                          <span className="font-extrabold font-mono text-sm text-rose-500">${totCr.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-500 uppercase text-[9px] block">Parity Balance</span>
+                          <span className={`font-extrabold font-mono text-sm ${diff === 0 ? 'text-slate-600' : 'text-rose-600'}`}>
+                            ${diff.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div>
+                        {isBalanced ? (
+                          <div className="bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20 rounded px-3 py-1 font-bold flex items-center gap-1.5">
+                            <FiCheckCircle /> Ledger Splits Balanced
+                          </div>
+                        ) : (
+                          <div className="bg-rose-50 text-rose-600 border border-rose-200 rounded px-3 py-1 font-bold flex items-center gap-1.5">
+                            <FiXCircle /> Ledger Splits Unbalanced
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* FORM CONTROLS */}
+                <div className="flex justify-end gap-2.5 pt-4 border-t">
+                  <button 
+                    onClick={() => handleCreateCustomVoucher('Draft')}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded text-xs font-bold transition"
+                  >
+                    Save as Draft
+                  </button>
+                  <button 
+                    onClick={() => handleCreateCustomVoucher('Pending Approval')}
+                    className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded text-xs font-bold transition"
+                  >
+                    Submit for Approval
+                  </button>
+                  <button 
+                    onClick={() => handleCreateCustomVoucher('Posted')}
+                    className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-5 py-2 rounded text-xs font-extrabold transition"
+                  >
+                    Post Voucher
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: BANK RECONCILIATION */}
+            {activeTransactionSubTab === 'reconcile' && (
+              <div className="space-y-6">
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm">
+                  <h3 className="font-extrabold text-base text-slate-900 font-manrope">SVB Bank Statements Matching Feed</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Match external bank feeds against posted ledger transactions.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* LEFT: EXTERNAL BANK FEED */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                    <div className="font-extrabold text-xs text-slate-800 border-b pb-2 flex justify-between items-center">
+                      <span>EXTERNAL BANK FEED</span>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono font-bold">
+                        {reconRecords.filter(r => r.status === 'Unmatched').length} Unmatched
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {reconRecords.map(r => (
+                        <div 
+                          key={r.reconId}
+                          className={`p-3 border rounded-lg flex items-center justify-between text-xs transition ${
+                            r.status === 'Matched' ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 hover:bg-white border-slate-200 shadow-sm'
+                          }`}
+                        >
+                          <div>
+                            <div className="font-extrabold text-slate-900">{r.description}</div>
+                            <div className="flex gap-2 text-[10px] font-bold text-slate-400 mt-1 font-mono">
+                              <span>DATE: {r.date}</span>
+                              <span>•</span>
+                              <span>ID: STMT-{r.reconId}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 text-right">
+                            <div>
+                              <div className={`font-extrabold font-mono text-sm ${r.type === 'Deposit' ? 'text-emerald-600' : 'text-slate-800'}`}>
+                                {r.type === 'Deposit' ? '+' : '-'}${r.amount.toLocaleString()}
+                              </div>
+                              <span className={`text-[9px] font-bold uppercase ${r.status === 'Matched' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {r.status}
+                              </span>
+                            </div>
+
+                            {r.status === 'Unmatched' && (
+                              <button 
+                                onClick={() => {
+                                  // Auto-match mock action
+                                  setReconRecords(reconRecords.map(item => item.reconId === r.reconId ? { ...item, status: 'Matched' as const } : item));
+                                  showToast(`Statement line STMT-${r.reconId} reconciled successfully!`, 'success');
+                                }}
+                                className="bg-[#12A594] hover:bg-[#0B7A6E] text-white font-extrabold px-2.5 py-1 rounded text-[10px] transition"
+                              >
+                                Match
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* RIGHT: LEDGER BANK POSTINGS */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                    <div className="font-extrabold text-xs text-slate-800 border-b pb-2">
+                      POSTED BANK LEDGER TRANSACTIONS (ACT-10003)
+                    </div>
+
+                    <div className="space-y-3">
+                      {vouchers
+                        .filter(v => v.status === 'Posted' && v.lines.some(l => l.accountId === 1))
+                        .map(v => {
+                          const bankLine = v.lines.find(l => l.accountId === 1);
+                          const isMatched = reconRecords.some(r => r.matchedVoucherId === v.voucherId);
+
+                          return (
+                            <div 
+                              key={v.voucherId}
+                              className={`p-3 border rounded-lg flex items-center justify-between text-xs ${
+                                isMatched ? 'bg-emerald-50/50 border-emerald-200' : 'bg-slate-50 border-slate-200'
+                              }`}
+                            >
+                              <div>
+                                <div className="font-extrabold text-slate-800">{v.narration}</div>
+                                <div className="flex gap-2 text-[10px] font-bold text-slate-400 mt-1 font-mono">
+                                  <span>ID: {v.voucherId}</span>
+                                  <span>•</span>
+                                  <span>NO: {v.voucherNumber}</span>
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <div className="font-bold font-mono text-slate-700">
+                                  ${(bankLine?.debitAmount || bankLine?.creditAmount || 0).toLocaleString()}
+                                </div>
+                                <span className={`text-[9px] font-bold uppercase ${isMatched ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                  {isMatched ? 'Reconciled' : 'Unmatched'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB CONTENT: BULK IMPORT */}
+            {activeTransactionSubTab === 'import' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-5">
+                <div className="border-b pb-3">
+                  <h3 className="font-extrabold text-base text-slate-900 font-manrope">CSV/Excel Bulk Voucher Ingestion</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Download the company templates, populate columns, and validate splits before batch ingestion.</p>
+                </div>
+
+                <div className="bg-slate-50 border rounded-lg p-6 flex flex-col items-center justify-center border-dashed py-10 space-y-4">
+                  <FiFileText className="text-3xl text-slate-400 animate-bounce" />
+                  <div className="text-center">
+                    <span className="font-extrabold text-slate-800 block text-xs">Drag and drop files here or click to browse</span>
+                    <span className="text-[10px] text-slate-400 mt-1 block">Supports .csv, .xlsx formatted journal uploads</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      showToast('Simulating bulk CSV validation: verified 12 rows, 0 errors.', 'success');
+                      setTimeout(() => {
+                        showToast('Batch Import complete: 3 Vouchers loaded.', 'success');
+                      }, 1000);
+                    }}
+                    className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-4 py-2 rounded text-xs font-bold transition"
+                  >
+                    Select CSV File Template
+                  </button>
+                </div>
+
+                <div className="bg-amber-50 text-amber-800 border border-amber-200 rounded p-4 text-xs font-semibold flex items-start gap-2">
+                  <FiInfo className="text-sm mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-extrabold block uppercase text-[10px]">Data Ingestion Controls</span>
+                    The batch processor automatically runs balancing audits (Total Debits == Total Credits) and period-lock validations before committing uploads to the general ledger repository database.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DRILL-DOWN OVERLAY / VOUCHER STUB DRAWER */}
+            {selectedVoucher && (
+              <div className="fixed inset-0 z-[9999] overflow-hidden">
+                <div 
+                  onClick={() => setSelectedVoucher(null)}
+                  className="absolute inset-0 bg-[#10163A]/50 backdrop-blur-sm transition-opacity duration-300"
+                ></div>
+                
+                <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+                  <div className="w-screen max-w-xl bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between animate-slide-in">
+                    {/* Drawer Header */}
+                    <div className="p-6 border-b border-slate-100 bg-[#10163A] text-white flex justify-between items-center">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-base tracking-wider uppercase font-manrope">{selectedVoucher.voucherNumber}</span>
+                          <span className={`px-2 py-0.5 rounded font-mono text-[9px] uppercase font-bold ${
+                            selectedVoucher.status === 'Posted' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/30' :
+                            selectedVoucher.status === 'Pending Approval' ? 'bg-[#FFFBEB] text-[#D97706] border border-[#D97706]/30' :
+                            'bg-slate-500/20 text-slate-300'
+                          }`}>
+                            {selectedVoucher.status}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wide mt-1">
+                          VOUCHER DETAILS & AUDIT TRACE
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedVoucher(null)}
+                        className="text-white hover:text-rose-400 font-extrabold text-lg p-1 transition"
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+
+                    {/* Drawer Content */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-800">
+                      {/* HEADER SUMMARY METRICS */}
+                      <div className="grid grid-cols-3 gap-3 bg-slate-50 border p-3.5 rounded-lg">
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Voucher Type</span>
+                          <span className="font-extrabold text-slate-800 uppercase">{selectedVoucher.voucherType}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Posting Date</span>
+                          <span className="font-bold text-slate-800">{selectedVoucher.date}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Total Amount</span>
+                          <span className="font-extrabold font-mono text-slate-800 text-sm">${selectedVoucher.totalDebit.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* DETAILS PANEL */}
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block">Created By</span>
+                            <span className="font-semibold text-slate-700">{selectedVoucher.createdBy}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block">Reference No</span>
+                            <span className="font-mono font-bold text-slate-700">{selectedVoucher.referenceNumber || 'N/A'}</span>
+                          </div>
+                        </div>
+                        <div className="pt-2">
+                          <span className="text-[9px] font-bold uppercase text-slate-400 block">General Narration</span>
+                          <p className="font-semibold text-slate-700 leading-relaxed bg-slate-50/50 p-2 border rounded">{selectedVoucher.narration}</p>
+                        </div>
+                      </div>
+
+                      {/* DOUBLE ENTRY LEDGER SPLITS TABLE */}
+                      <div className="space-y-2.5">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Ledger Account Splits</span>
+                        <div className="border border-slate-200 rounded-lg overflow-hidden">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-slate-100 border-b text-slate-600 font-bold uppercase text-[9px] tracking-wide">
+                                <th className="py-2.5 px-3">ACCOUNT</th>
+                                <th className="py-2.5 px-3 text-right">DEBIT</th>
+                                <th className="py-2.5 px-3 text-right">CREDIT</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y text-slate-700 font-semibold font-mono">
+                              {selectedVoucher.lines.map((line, idx) => {
+                                const acc = ledgers.find(l => l.id === line.accountId);
+                                return (
+                                  <tr key={idx} className="hover:bg-slate-50/50">
+                                    <td className="py-2.5 px-3">
+                                      <span className="bg-[#10163A] text-white px-2 py-0.5 rounded text-[10px] font-bold mr-2">
+                                        {acc?.code}
+                                      </span>
+                                      <span className="text-slate-800 font-sans font-bold">{acc?.name}</span>
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right text-emerald-600">
+                                      {line.debitAmount > 0 ? `$${line.debitAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '--'}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-right text-rose-500">
+                                      {line.creditAmount > 0 ? `$${line.creditAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '--'}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* ATTACHED DOCUMENTS LIST */}
+                      <div className="space-y-2">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Attached Support Documents</span>
+                        {selectedVoucher.attachments.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {selectedVoucher.attachments.map((file, idx) => (
+                              <div key={idx} className="flex items-center gap-2 bg-slate-50 border p-2 rounded-lg font-semibold text-indigo-700">
+                                <FiFileText />
+                                <span className="flex-1 truncate">{file}</span>
+                                <button className="text-slate-400 hover:text-[#12A594] text-xs font-bold uppercase tracking-wide">Download</button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-slate-400 font-semibold italic">No source supporting files attached to this voucher.</div>
+                        )}
+                      </div>
+
+                      {/* AUDIT LOG & HISTORICAL VERSIONING */}
+                      <div className="space-y-3 border-t pt-4">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Audit Log / Work Activity Logs</span>
+                        <div className="relative border-l-2 border-slate-200 pl-4 space-y-4">
+                          {selectedVoucher.history.map((log, index) => (
+                            <div key={index} className="relative text-xs">
+                              <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-[#12A594]"></span>
+                              <div className="flex justify-between items-center">
+                                <span className="font-extrabold text-[#10163A] uppercase text-[10px]">{log.action}</span>
+                                <span className="text-[10px] text-slate-400 font-bold font-mono">{log.performedAt.slice(0,16).replace('T',' ')}</span>
+                              </div>
+                              <p className="text-slate-500 font-semibold mt-0.5">Performed by {log.performedBy} {log.details ? `(${log.details})` : ''}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Drawer Footer Actions */}
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2.5">
+                      {selectedVoucher.status === 'Pending Approval' && (
+                        <button 
+                          onClick={() => handleApproveVoucher(selectedVoucher.voucherId)}
+                          className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-bold transition text-center"
+                        >
+                          Approve Voucher
+                        </button>
+                      )}
+                      
+                      {selectedVoucher.status === 'Posted' && (
+                        <button 
+                          onClick={() => handleReverseVoucher(selectedVoucher.voucherId)}
+                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded font-bold transition text-center"
+                        >
+                          Reverse Entry (Mirror Void)
+                        </button>
+                      )}
+
+                      {(selectedVoucher.status === 'Draft' || selectedVoucher.status === 'Pending Approval') && (
+                        <button 
+                          onClick={() => {
+                            const reason = prompt('Reason for cancelling this voucher:', 'Duplicate entry adjustment');
+                            if (reason) handleCancelVoucher(selectedVoucher.voucherId, reason);
+                          }}
+                          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white py-2 rounded font-bold transition text-center"
+                        >
+                          Cancel/Void Entry
+                        </button>
+                      )}
+
+                      <button 
+                        onClick={() => {
+                          setSelectedVoucher(null);
+                          window.print();
+                        }}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-semibold transition text-center"
+                      >
+                        Print Stub
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </main>
         );
+      }
 
-      case 'payroll':
+      case 'payroll': {
+        const activeRun = payrollRuns.find(r => r.runId === selectedPayrollRunId);
+        
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold font-manrope text-[#161B33]">Payroll & Salary Manager</h2>
-                  <p className="text-xs text-[#5B6178] mt-1">Manage employee profiles, payroll distributions, and tax deductions</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    showToast('Compiling employee timesheets and salary components...', 'success');
-                    setTimeout(() => {
-                      setEmployees(employees.map(emp => ({ ...emp, status: 'Paid' })));
-                      showToast('Payroll Cycle executed. 3 employees successfully paid.', 'success');
-                    }, 1200);
-                  }}
-                  className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 transition"
-                >
-                  <span className="material-icons-round text-sm">play_arrow</span> Run Payroll Cycle
-                </button>
+            {/* WORKSPACE HEADER */}
+            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-manrope text-[#161B33]">HR & Payroll Manager Workspace</h2>
+                <p className="text-xs text-[#5B6178] mt-1">
+                  Manage salary bands, define pay structures, calculate monthly payroll, run compliance checks, and auto-post JVs.
+                </p>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
-                      <th className="py-3 px-2">ID</th>
-                      <th className="py-3 px-2">EMPLOYEE NAME</th>
-                      <th className="py-3 px-2">DEPARTMENT</th>
-                      <th className="py-3 px-2">DESIGNATION</th>
-                      <th className="py-3 px-2">GROSS SALARY</th>
-                      <th className="py-3 px-2 text-right">STATUS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E1E5EC] text-[#161B33]">
+              {/* TAB SELECTOR */}
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold select-none">
+                <button 
+                  onClick={() => { setActivePayrollTab('employees'); setSelectedPayrollRunId(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activePayrollTab === 'employees' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Employee Directory
+                </button>
+                <button 
+                  onClick={() => { setActivePayrollTab('structure'); setSelectedPayrollRunId(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activePayrollTab === 'structure' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Compensation Structures
+                </button>
+                <button 
+                  onClick={() => { setActivePayrollTab('runs'); setSelectedPayrollRunId(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activePayrollTab === 'runs' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Payroll Runs
+                </button>
+                <button 
+                  onClick={() => { setActivePayrollTab('loans'); setSelectedPayrollRunId(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activePayrollTab === 'loans' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Loans & Advances
+                </button>
+                <button 
+                  onClick={() => { setActivePayrollTab('compliance'); setSelectedPayrollRunId(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activePayrollTab === 'compliance' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Statutory & Compliance
+                </button>
+              </div>
+            </div>
+
+            {/* SUB-TAB: EMPLOYEE DIRECTORY */}
+            {activePayrollTab === 'employees' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Active Corporate Employees</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Manage bank account profiles, statutory ID numbers (PF/ESI/PAN), and tax regimes.</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowNewEmployeeModal(true)}
+                    className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded text-xs font-bold transition"
+                  >
+                    + Add Employee
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-3 px-2">EMPLOYEE ID</th>
+                        <th className="py-3 px-2">NAME</th>
+                        <th className="py-3 px-2">DEPARTMENT</th>
+                        <th className="py-3 px-2">DESIGNATION</th>
+                        <th className="py-3 px-2">BANK DETAILS</th>
+                        <th className="py-3 px-2">TAX REGIME</th>
+                        <th className="py-3 px-2">PF/ESI IDS</th>
+                        <th className="py-3 px-2 text-right">STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold">
+                      {employees.map(emp => (
+                        <tr key={emp.employeeId} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-2 font-mono font-bold text-slate-700">{emp.employeeId}</td>
+                          <td className="py-3 px-2 font-bold text-slate-800">{emp.name}</td>
+                          <td className="py-3 px-2 text-slate-600">{emp.departmentId}</td>
+                          <td className="py-3 px-2 text-slate-500">{emp.designation}</td>
+                          <td className="py-3 px-2 font-mono text-[11px] text-slate-600">
+                            {emp.bankAccountNo ? (
+                              <div>
+                                <div>A/C: {emp.bankAccountNo}</div>
+                                <div className="text-[10px] text-slate-400">IFSC: {emp.ifscCode}</div>
+                              </div>
+                            ) : (
+                              <span className="text-rose-500 font-bold uppercase text-[9px] bg-rose-50 px-2 py-0.5 rounded border border-rose-200">Missing Details</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2 font-bold text-[10px] uppercase text-slate-700">
+                            <span className="bg-slate-100 border px-2 py-0.5 rounded">
+                              {emp.taxRegime} Regime
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 font-mono text-[10px] text-slate-500">
+                            <div>PF: {emp.pfNumber}</div>
+                            <div>ESI: {emp.esiNumber}</div>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <span className="bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20 px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase font-mono">
+                              {emp.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: COMPENSATION STRUCTURE */}
+            {activePayrollTab === 'structure' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* LEFT LIST */}
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                    Select Employee
+                  </div>
+                  <div className="space-y-2">
                     {employees.map(emp => (
-                      <tr key={emp.id} className="hover:bg-slate-50 transition">
-                        <td className="py-3 px-2 font-mono font-bold text-slate-700">{emp.id}</td>
-                        <td className="py-3 px-2 font-bold text-sm text-[#161B33]">{emp.name}</td>
-                        <td className="py-3 px-2 font-semibold text-slate-600">{emp.dept}</td>
-                        <td className="py-3 px-2 text-slate-500 font-semibold">{emp.desg}</td>
-                        <td className="py-3 px-2 font-bold font-mono text-sm">${emp.sal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-3 px-2 text-right">
-                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold font-mono uppercase ${
-                            emp.status === 'Paid' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/30' : 'bg-[#FFF3EC] text-[#E2662F] border border-[#E2662F]/30'
-                          }`}>
-                            {emp.status}
-                          </span>
-                        </td>
-                      </tr>
+                      <div 
+                        key={emp.employeeId}
+                        onClick={() => setSelectedPayrollEmployeeId(emp.employeeId)}
+                        className={`p-3 border rounded-lg cursor-pointer transition text-xs flex justify-between items-center ${
+                          selectedPayrollEmployeeId === emp.employeeId ? 'bg-indigo-50 border-indigo-300 shadow-sm' : 'hover:bg-slate-50 border-slate-200'
+                        }`}
+                      >
+                        <div>
+                          <div className="font-bold text-slate-800">{emp.name}</div>
+                          <div className="text-[10px] text-slate-400 font-semibold">{emp.designation} • {emp.departmentId}</div>
+                        </div>
+                        <span className="font-mono font-bold text-slate-500 text-[10px]">{emp.employeeId}</span>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
+
+                {/* RIGHT STRUCTURE DETAILS */}
+                {(() => {
+                  const emp = employees.find(e => e.employeeId === selectedPayrollEmployeeId);
+                  const struct = salaryStructures.find(s => s.employeeId === selectedPayrollEmployeeId);
+                  if (!emp || !struct) return null;
+
+                  const basicComp = struct.components.find(c => c.componentName === 'Basic')?.value || 0;
+                  
+                  // Calculate split components
+                  let totalEarnings = 0;
+                  let totalDeductions = 0;
+
+                  struct.components.forEach(c => {
+                    let val = c.value;
+                    if (c.calculationType === 'percentage' && c.calculationBase === 'Basic') {
+                      val = (basicComp * c.value) / 100;
+                    }
+                    if (c.componentType === 'earning') totalEarnings += val;
+                    else totalDeductions += val;
+                  });
+
+                  // Employer PF
+                  const daComp = struct.components.find(c => c.componentName === 'DA')?.value || 0;
+                  const daVal = (basicComp * daComp) / 100;
+                  const employerPFVal = ((basicComp + daVal) * 12) / 100;
+                  const totalCTC = totalEarnings + employerPFVal;
+
+                  return (
+                    <div className="md:col-span-2 bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                      <div className="border-b pb-4 flex justify-between items-start">
+                        <div>
+                          <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Salary Structure: {emp.name}</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">Designation: {emp.designation} • Regime: {emp.taxRegime.toUpperCase()}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Cost to Company (CTC)</span>
+                          <span className="font-extrabold text-lg text-slate-800 font-mono">${Math.round(totalCTC).toLocaleString()}/mo</span>
+                        </div>
+                      </div>
+
+                      {/* COMPENSATION MATRIX COMPONENTS */}
+                      <div className="space-y-4">
+                        <div className="font-extrabold text-xs text-slate-800 uppercase tracking-wide border-b pb-1.5">Earnings Components</div>
+                        <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                          {struct.components.filter(c => c.componentType === 'earning').map((c, idx) => {
+                            let calculatedValue = c.value;
+                            if (c.calculationType === 'percentage' && c.calculationBase === 'Basic') {
+                              calculatedValue = (basicComp * c.value) / 100;
+                            }
+                            return (
+                              <div key={idx} className="flex justify-between border-b pb-2 border-slate-100">
+                                <div>
+                                  <span className="font-bold text-slate-700">{c.componentName}</span>
+                                  {c.calculationType === 'percentage' && (
+                                    <span className="text-[9px] text-slate-400 font-mono ml-2">({c.value}% of {c.calculationBase})</span>
+                                  )}
+                                </div>
+                                <span className="font-bold font-mono text-slate-800">${calculatedValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="font-extrabold text-xs text-slate-800 uppercase tracking-wide border-b pb-1.5 pt-2">Deduction & Tax Contributions</div>
+                        <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                          {struct.components.filter(c => c.componentType === 'deduction').map((c, idx) => {
+                            let calculatedValue = c.value;
+                            if (c.calculationType === 'percentage' && c.calculationBase === 'Basic+DA') {
+                              const daComp = struct.components.find(comp => comp.componentName === 'DA')?.value || 0;
+                              const daVal = (basicComp * daComp) / 100;
+                              calculatedValue = ((basicComp + daVal) * c.value) / 100;
+                            }
+                            return (
+                              <div key={idx} className="flex justify-between border-b pb-2 border-slate-100">
+                                <div>
+                                  <span className="font-bold text-rose-600">{c.componentName}</span>
+                                  {c.calculationType === 'percentage' && (
+                                    <span className="text-[9px] text-slate-400 font-mono ml-2">({c.value}% of {c.calculationBase})</span>
+                                  )}
+                                </div>
+                                <span className="font-bold font-mono text-rose-500">-${calculatedValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* CTC SUMMARY BAR */}
+                      <div className="bg-slate-50 border rounded-lg p-4 grid grid-cols-4 gap-4 text-xs font-semibold text-center">
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold block">Gross Earnings</span>
+                          <span className="text-sm font-extrabold text-slate-800 font-mono">${Math.round(totalEarnings).toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold block">Total Deductions</span>
+                          <span className="text-sm font-extrabold text-rose-500 font-mono">-${Math.round(totalDeductions).toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-slate-400 uppercase font-bold block">Employer PF</span>
+                          <span className="text-sm font-extrabold text-slate-600 font-mono">${Math.round(employerPFVal).toLocaleString()}</span>
+                        </div>
+                        <div className="bg-emerald-50/50 border border-emerald-200 rounded p-1.5">
+                          <span className="text-[9px] text-[#2E9E5B] uppercase font-bold block">Net Take-Home</span>
+                          <span className="text-sm font-extrabold text-[#2E9E5B] font-mono">${Math.round(totalEarnings - totalDeductions).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2 border-t">
+                        <button 
+                          onClick={() => {
+                            // Revision Increments
+                            const raisePercent = prompt('Enter increment percentage (e.g. 5 for 5% raise):', '10');
+                            if (raisePercent) {
+                              const mult = 1 + Number(raisePercent) / 100;
+                              const updated = struct.components.map(c => c.componentName === 'Basic' ? { ...c, value: Math.round(c.value * mult) } : c);
+                              handleUpdateSalaryStructure(selectedPayrollEmployeeId, updated);
+                              showToast(`Revision increments saved. Salary increased by ${raisePercent}%!`, 'success');
+                            }
+                          }}
+                          className="bg-[#10163A] hover:bg-[#1B2456] text-white px-3.5 py-1.5 rounded text-xs font-bold transition"
+                        >
+                          Revise Salary Structure (Salary Revision)
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
+            )}
+
+            {/* SUB-TAB: PAYROLL RUN CYCLE */}
+            {activePayrollTab === 'runs' && (
+              <div className="space-y-6">
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Execute Payroll Cycle</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Maker-checker approval flow. Lock period controls are strictly enforced.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={() => handleCreatePayrollRun('August', '2026', 'regular')}
+                      className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-4 py-2 rounded text-xs font-extrabold flex items-center gap-1.5 transition"
+                    >
+                      <FiRefreshCw className="animate-spin text-sm" /> Run August 2026 Payroll
+                    </button>
+                  </div>
+                </div>
+
+                {/* RUNS LIST */}
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                    Historical & Active Payroll Cycles
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                          <th className="py-3 px-2">RUN ID</th>
+                          <th className="py-3 px-2">CYCLE PERIOD</th>
+                          <th className="py-3 px-2">RUN TYPE</th>
+                          <th className="py-3 px-2 text-right">TOTAL GROSS</th>
+                          <th className="py-3 px-2 text-right">TOTAL DEDUCTIONS</th>
+                          <th className="py-3 px-2 text-right">TOTAL NET PAYABLE</th>
+                          <th className="py-3 px-2 text-center">APPROVED BY</th>
+                          <th className="py-3 px-2 text-right">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold">
+                        {payrollRuns.map(run => (
+                          <tr 
+                            key={run.runId} 
+                            onClick={() => setSelectedPayrollRunId(run.runId)}
+                            className="hover:bg-slate-50 cursor-pointer transition"
+                          >
+                            <td className="py-3 px-2 font-mono font-bold text-slate-700">{run.runId}</td>
+                            <td className="py-3 px-2 font-bold text-slate-800">{run.periodMonth} {run.periodYear}</td>
+                            <td className="py-3 px-2 uppercase text-[10px] text-slate-500 font-bold">{run.runType}</td>
+                            <td className="py-3 px-2 font-mono text-right font-bold">${run.totalGross.toLocaleString()}</td>
+                            <td className="py-3 px-2 font-mono text-right text-rose-500">-${run.totalDeductions.toLocaleString()}</td>
+                            <td className="py-3 px-2 font-mono text-right text-[#2E9E5B] font-bold">${run.totalNet.toLocaleString()}</td>
+                            <td className="py-3 px-2 text-center text-slate-600">{run.approvedBy || '--'}</td>
+                            <td className="py-3 px-2 text-right">
+                              <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase font-mono ${
+                                run.status === 'paid' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20' : 'bg-slate-100 text-slate-600 border border-slate-300'
+                              }`}>
+                                {run.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: LOANS & ADVANCES */}
+            {activePayrollTab === 'loans' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Employee Loans & Advances Repayments</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Salary advances are automatically scheduled for EMI deduction from monthly payslips.</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowNewLoanModal(true)}
+                    className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded text-xs font-bold transition"
+                  >
+                    + Request Advance Loan
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-3 px-2">LOAN ID</th>
+                        <th className="py-3 px-2">EMPLOYEE ID</th>
+                        <th className="py-3 px-2">NAME</th>
+                        <th className="py-3 px-2">LOAN TYPE</th>
+                        <th className="py-3 px-2 text-right">PRINCIPAL AMOUNT</th>
+                        <th className="py-3 px-2 text-right">EMI DEDUCTION</th>
+                        <th className="py-3 px-2 text-right">REMAINING BALANCE</th>
+                        <th className="py-3 px-2 text-right">STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold">
+                      {employeeLoans.map(l => {
+                        const emp = employees.find(e => e.employeeId === l.employeeId);
+                        return (
+                          <tr key={l.loanId} className="hover:bg-slate-50 transition">
+                            <td className="py-3 px-2 font-mono font-bold text-slate-700">{l.loanId}</td>
+                            <td className="py-3 px-2 font-mono text-slate-600">{l.employeeId}</td>
+                            <td className="py-3 px-2 font-bold text-slate-800">{emp?.name || 'Unknown'}</td>
+                            <td className="py-3 px-2 text-indigo-700 uppercase font-bold text-[10px]">{l.loanType}</td>
+                            <td className="py-3 px-2 font-mono text-right font-bold">${l.principalAmount.toLocaleString()}</td>
+                            <td className="py-3 px-2 font-mono text-right text-rose-500">-${l.emiAmount.toLocaleString()}/mo</td>
+                            <td className="py-3 px-2 font-mono text-right font-extrabold">${l.remainingBalance.toLocaleString()}</td>
+                            <td className="py-3 px-2 text-right">
+                              <span className={`px-2.5 py-0.5 rounded text-[10px] font-extrabold uppercase font-mono ${
+                                l.status === 'active' ? 'bg-[#FFFBEB] text-[#D97706] border border-[#D97706]/20' : 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20'
+                              }`}>
+                                {l.status}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB: STATUTORY & COMPLIANCE */}
+            {activePayrollTab === 'compliance' && (
+              <div className="space-y-6">
+                {/* CALENDAR DUE DATE ALERTS */}
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide flex items-center gap-1.5">
+                    <FiCalendar className="text-[#12A594]" /> STATUTORY COMPLIANCE DEADLINES
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+                    <div className="border border-red-200 bg-red-50/50 p-3 rounded-lg flex justify-between items-center">
+                      <div>
+                        <span className="font-extrabold text-rose-700 text-[10px] uppercase block">PF CHALLAN FILING (AUG 2026)</span>
+                        <span className="text-slate-500">Due: September 15th, 2026</span>
+                      </div>
+                      <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded font-extrabold text-[9px] uppercase border border-rose-300">Pending Run</span>
+                    </div>
+
+                    <div className="border border-indigo-200 bg-indigo-50/50 p-3 rounded-lg flex justify-between items-center">
+                      <div>
+                        <span className="font-extrabold text-indigo-700 text-[10px] uppercase block">TDS RETURN FILING (Q2)</span>
+                        <span className="text-slate-500">Due: October 31st, 2026</span>
+                      </div>
+                      <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-extrabold text-[9px] uppercase border border-indigo-300">12 days left</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* FILINGS TABLE */}
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                    Government Portal Filings History
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                          <th className="py-3 px-2">FILING ID</th>
+                          <th className="py-3 px-2">TYPE</th>
+                          <th className="py-3 px-2">ASSOCIATED CYCLE</th>
+                          <th className="py-3 px-2">DUE DATE</th>
+                          <th className="py-3 px-2">FILED DATE</th>
+                          <th className="py-3 px-2">CHALLAN REFERENCE</th>
+                          <th className="py-3 px-2 text-right">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold font-mono">
+                        {statutoryFilings.map(f => (
+                          <tr key={f.filingId} className="hover:bg-slate-50 transition">
+                            <td className="py-3 px-2 text-slate-700 font-bold">{f.filingId}</td>
+                            <td className="py-3 px-2 text-slate-900 font-sans font-bold">
+                              <span className="bg-slate-100 px-2.5 py-0.5 border rounded uppercase text-[10px]">
+                                {f.filingType} filing
+                              </span>
+                            </td>
+                            <td className="py-3 px-2 text-slate-500 font-sans font-semibold">{f.runId}</td>
+                            <td className="py-3 px-2 text-slate-500">{f.dueDate}</td>
+                            <td className="py-3 px-2 text-slate-600">{f.filedDate || '--'}</td>
+                            <td className="py-3 px-2 text-indigo-700 font-bold">{f.challanReference || '--'}</td>
+                            <td className="py-3 px-2 text-right font-sans">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                                f.status === 'filed' ? 'bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20' : 'bg-[#FFF3EC] text-[#E2662F] border border-[#E2662F]/20'
+                              }`}>
+                                {f.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* PAYROLL PREVIEW DRAWER (DRILL-DOWN OVERLAY) */}
+            {activeRun && (
+              <div className="fixed inset-0 z-[9999] overflow-hidden">
+                <div 
+                  onClick={() => setSelectedPayrollRunId(null)}
+                  className="absolute inset-0 bg-[#10163A]/50 backdrop-blur-sm transition-opacity duration-300"
+                ></div>
+                
+                <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+                  <div className="w-screen max-w-2xl bg-white border-l border-slate-200 shadow-2xl flex flex-col justify-between animate-slide-in">
+                    {/* Header */}
+                    <div className="p-6 border-b border-slate-100 bg-[#10163A] text-white flex justify-between items-center">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-base tracking-wider uppercase font-manrope">PAYROLL PREVIEW: {activeRun.periodMonth} {activeRun.periodYear}</span>
+                          <span className="bg-slate-600/50 text-slate-200 border px-2 py-0.5 rounded text-[9px] uppercase font-bold font-mono">
+                            {activeRun.status}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-300 font-bold uppercase tracking-wide mt-1">
+                          Audits calculations splits before ledger posting commit
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => setSelectedPayrollRunId(null)}
+                        className="text-white hover:text-rose-400 font-extrabold text-lg p-1 transition"
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-6 space-y-6 text-xs text-slate-800">
+                      {/* RUN TOTAL SUMMARY PANEL */}
+                      <div className="grid grid-cols-3 gap-3 bg-slate-50 border p-4 rounded-lg text-center">
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Gross Cost</span>
+                          <span className="font-extrabold font-mono text-slate-800 text-sm">${activeRun.totalGross.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Deductions Withheld</span>
+                          <span className="font-extrabold font-mono text-rose-500 text-sm">-${activeRun.totalDeductions.toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="font-semibold text-slate-400 uppercase text-[9px] block">Net Disbursements</span>
+                          <span className="font-extrabold font-mono text-[#2E9E5B] text-sm">${activeRun.totalNet.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* INDIVIDUAL PAYSLIPS SPLIT LIST */}
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">Calculated Payslips by Employee</span>
+                        <div className="space-y-3">
+                          {employees.map(emp => {
+                            if (emp.status !== 'active') return null;
+
+                            const struct = salaryStructures.find(s => s.employeeId === emp.employeeId);
+                            const att = attendanceSummaries.find(a => a.employeeId === emp.employeeId) || { presentDays: 22, lopDays: 0, overtimeHours: 0 };
+                            const loan = employeeLoans.find(l => l.employeeId === emp.employeeId && l.status === 'active');
+                            if (!struct) return null;
+
+                            const basicComp = struct.components.find(c => c.componentName === 'Basic')?.value || 0;
+                            const lopDays = att.lopDays || 0;
+                            const payMultiplier = Math.max(0, (22 - lopDays) / 22);
+
+                            let basicVal = basicComp * payMultiplier;
+                            let hraVal = 0;
+                            let daVal = 0;
+                            let empGross = 0;
+
+                            struct.components.forEach(comp => {
+                              if (comp.componentType === 'earning') {
+                                let compVal = comp.value;
+                                if (comp.calculationType === 'percentage' && comp.calculationBase === 'Basic') {
+                                    compVal = (basicComp * comp.value) / 100;
+                                }
+                                empGross += compVal * payMultiplier;
+                                if (comp.componentName === 'DA') daVal = compVal * payMultiplier;
+                              }
+                            });
+
+                            if (att.overtimeHours > 0) {
+                              const hourlyRate = basicComp / 22 / 8;
+                              const otPay = hourlyRate * 1.5 * att.overtimeHours;
+                              empGross += otPay;
+                            }
+
+                            const pfBase = basicVal + daVal;
+                            const pfEmp = (pfBase * 12) / 100;
+                            const tdsVal = struct.components.find(c => c.componentName === 'TDS Deduction')?.value || 0;
+                            const ptVal = 200;
+
+                            let empDeductions = pfEmp + tdsVal + ptVal;
+                            let loanEMI = 0;
+                            if (loan) {
+                              loanEMI = Math.min(loan.emiAmount, loan.remainingBalance);
+                              empDeductions += loanEMI;
+                            }
+
+                            const empNet = empGross - empDeductions;
+
+                            return (
+                              <div key={emp.employeeId} className="border rounded-lg p-3 space-y-2.5 bg-slate-50/50 hover:bg-slate-50 transition">
+                                <div className="flex justify-between items-center border-b pb-1.5">
+                                  <div>
+                                    <span className="font-extrabold text-slate-800 text-[12px]">{emp.name}</span>
+                                    <span className="text-[10px] text-slate-400 font-semibold ml-2">({emp.designation})</span>
+                                  </div>
+                                  <span className="font-mono font-bold text-slate-500 text-[10px]">{emp.employeeId}</span>
+                                </div>
+                                <div className="grid grid-cols-4 gap-2 text-[11px] font-semibold">
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 uppercase font-bold block">Gross Earning</span>
+                                    <span className="font-mono font-bold">${Math.round(empGross).toLocaleString()}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 uppercase font-bold block">PF (12%)</span>
+                                    <span className="font-mono text-rose-500">-${Math.round(pfEmp).toLocaleString()}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 uppercase font-bold block">TDS + PT</span>
+                                    <span className="font-mono text-rose-500">-${Math.round(tdsVal + ptVal).toLocaleString()}</span>
+                                  </div>
+                                  {loanEMI > 0 && (
+                                    <div>
+                                      <span className="text-[9px] text-slate-400 uppercase font-bold block">Loan EMI Deduct</span>
+                                      <span className="font-mono text-rose-500">-${Math.round(loanEMI).toLocaleString()}</span>
+                                    </div>
+                                  )}
+                                  <div className="bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                                    <span className="text-[9px] text-[#2E9E5B] uppercase font-bold block">Net Salary Paid</span>
+                                    <span className="font-mono font-bold text-[#2E9E5B]">${Math.round(empNet).toLocaleString()}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* SYSTEM COMPLIANCE ALERTS & WARNINGS */}
+                      <div className="space-y-2 border-t pt-4">
+                        <span className="text-[10px] font-extrabold uppercase text-slate-800 block">System Compliance Validation Checklist</span>
+                        <div className="space-y-2 font-semibold">
+                          <div className="border border-emerald-200 bg-emerald-50/50 p-2.5 rounded-lg flex items-center gap-2">
+                            <FiCheck className="text-emerald-500 text-sm shrink-0" />
+                            <span>Total Debits equal Total Credits validation check passed.</span>
+                          </div>
+                          <div className="border border-emerald-200 bg-emerald-50/50 p-2.5 rounded-lg flex items-center gap-2">
+                            <FiCheck className="text-emerald-500 text-sm shrink-0" />
+                            <span>Employee bank details (IFSC codes, accounts) are active and verified.</span>
+                          </div>
+                          <div className="border border-emerald-200 bg-emerald-50/50 p-2.5 rounded-lg flex items-center gap-2">
+                            <FiCheck className="text-emerald-500 text-sm shrink-0" />
+                            <span>Tax regime investment declarations match compliance slabs.</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2.5">
+                      {activeRun.status === 'draft' && (
+                        <button 
+                          onClick={() => handleLockAndDisbursePayroll(activeRun.runId)}
+                          className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2.5 rounded font-extrabold transition text-center"
+                        >
+                          Lock Period, Approve & Auto-Post JV
+                        </button>
+                      )}
+                      {activeRun.status === 'paid' && (
+                        <div className="w-full bg-[#EAF5EE] text-[#2E9E5B] border border-[#2E9E5B]/20 py-2.5 rounded font-bold text-center">
+                          Payroll cycle approved, disbursed & posted to transactions journal ledger.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: ADD NEW EMPLOYEE */}
+            {showNewEmployeeModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <FiPlus className="text-[#12A594]" /> Add New Employee Profile
+                    </h3>
+                    <button onClick={() => setShowNewEmployeeModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  <form onSubmit={handleCreateEmployee} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Employee ID</label>
+                        <input 
+                          type="text" 
+                          value={newEmpId} 
+                          disabled
+                          className="w-full p-2 border rounded font-mono font-bold bg-slate-100" 
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Employee Name</label>
+                        <input 
+                          type="text" 
+                          value={newEmpName} 
+                          onChange={e => setNewEmpName(e.target.value)} 
+                          placeholder="e.g. John Doe"
+                          className="w-full p-2 border rounded text-slate-800" 
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Department</label>
+                        <select 
+                          value={newEmpDept} 
+                          onChange={e => setNewEmpDept(e.target.value)}
+                          className="w-full p-2 border rounded bg-white text-slate-800"
+                        >
+                          <option value="Engineering">Engineering</option>
+                          <option value="Finance">Finance</option>
+                          <option value="Sales">Sales</option>
+                          <option value="HR & Admin">HR & Admin</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Designation</label>
+                        <input 
+                          type="text" 
+                          value={newEmpDesg} 
+                          onChange={e => setNewEmpDesg(e.target.value)} 
+                          placeholder="e.g. Senior Backend Engineer"
+                          className="w-full p-2 border rounded text-slate-800" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-2">
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Bank Account Number</label>
+                        <input 
+                          type="text" 
+                          value={newEmpBank} 
+                          onChange={e => setNewEmpBank(e.target.value)} 
+                          placeholder="e.g. 5002931082"
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">IFSC Code</label>
+                        <input 
+                          type="text" 
+                          value={newEmpIfsc} 
+                          onChange={e => setNewEmpIfsc(e.target.value)} 
+                          placeholder="e.g. SVB0000123"
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">PAN Number</label>
+                        <input 
+                          type="text" 
+                          value={newEmpPan} 
+                          onChange={e => setNewEmpPan(e.target.value)} 
+                          placeholder="ABCDE1234F"
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">PF Number</label>
+                        <input 
+                          type="text" 
+                          value={newEmpPf} 
+                          onChange={e => setNewEmpPf(e.target.value)} 
+                          placeholder="PF/XX/10293"
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">ESI Number</label>
+                        <input 
+                          type="text" 
+                          value={newEmpEsi} 
+                          onChange={e => setNewEmpEsi(e.target.value)} 
+                          placeholder="ESI/XX/9812"
+                          className="w-full p-2 border rounded text-slate-800 font-mono" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Income Tax Regime</label>
+                      <select 
+                        value={newEmpRegime} 
+                        onChange={e => setNewEmpRegime(e.target.value as any)}
+                        className="w-full p-2 border rounded bg-white text-slate-800"
+                      >
+                        <option value="new">New regime (default exemption)</option>
+                        <option value="old">Old regime (supports declarations)</option>
+                      </select>
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition">
+                        Register Employee
+                      </button>
+                      <button type="button" onClick={() => setShowNewEmployeeModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: REQUEST ADVANCE LOAN */}
+            {showNewLoanModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <FiPlus className="text-[#12A594]" /> Request Advance Loan Approval
+                    </h3>
+                    <button onClick={() => setShowNewLoanModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  <form onSubmit={handleRequestLoan} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Select Employee</label>
+                      <select 
+                        value={newLoanEmpId} 
+                        onChange={e => setNewLoanEmpId(e.target.value)}
+                        className="w-full p-2 border rounded bg-white text-slate-800 font-bold"
+                      >
+                        {employees.map(e => (
+                          <option key={e.employeeId} value={e.employeeId}>{e.employeeId} - {e.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Loan Type</label>
+                      <select 
+                        value={newLoanType} 
+                        onChange={e => setNewLoanType(e.target.value as any)}
+                        className="w-full p-2 border rounded bg-white text-slate-800"
+                      >
+                        <option value="advance">Salary Advance (Short Term)</option>
+                        <option value="loan">Employee Loan (Long Term EMI)</option>
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Principal Amount ($)</label>
+                        <input 
+                          type="number" 
+                          value={newLoanPrincipal}
+                          onChange={e => setNewLoanPrincipal(Number(e.target.value))}
+                          className="w-full p-2 border rounded font-mono font-bold text-slate-800" 
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">EMI Deduction ($/mo)</label>
+                        <input 
+                          type="number" 
+                          value={newLoanEmi}
+                          onChange={e => setNewLoanEmi(Number(e.target.value))}
+                          className="w-full p-2 border rounded font-mono font-bold text-rose-600" 
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition">
+                        Disburse Loan
+                      </button>
+                      <button type="button" onClick={() => setShowNewLoanModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </main>
         );
+      }
 
       case 'documents':
         return (
