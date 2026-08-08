@@ -84,6 +84,22 @@ interface ReconRecord {
   status: 'Matched' | 'Unmatched';
 }
 
+interface ReportProvisionalEntry {
+  provisionalId: string;
+  accountName: string;
+  debitAmount: number;
+  creditAmount: number;
+  description: string;
+}
+
+interface ReportAnnotation {
+  annotationId: string;
+  lineItemRef: string;
+  comment: string;
+  createdBy: string;
+  createdAt: string;
+}
+
 interface ERPDocument {
   documentId: string;
   fileName: string;
@@ -849,10 +865,61 @@ export default function App() {
     { name: 'HR Payroll Automated Chain', completed: 15, total: 15 }
   ]);
 
-  const [activeReport, setActiveReport] = useState<string | null>(null);
   const [profitLossView, setProfitLossView] = useState<'monthly' | 'yearly'>('monthly');
   const [plTimelineView, setPlTimelineView] = useState<'1D' | '1W' | '1M' | '3M' | '6M' | '1Y' | '5Y'>('1Y');
   const [plChartType, setPlChartType] = useState<'line' | 'candlestick'>('line');
+
+  // Reports active tab states
+  const [activeReportTab, setActiveReportTab] = useState<'library' | 'builder' | 'schedules' | 'audit'>('library');
+  const [selectedReportType, setSelectedReportType] = useState<string>('Balance Sheet');
+  const [comparisonPeriod, setComparisonPeriod] = useState<'previous' | 'priorYear' | 'none'>('none');
+  const [reportViewMode, setReportViewMode] = useState<'table' | 'chart'>('table');
+  const [selectedDrillDownAccount, setSelectedDrillDownAccount] = useState<number | null>(null);
+  const [reportSearchQuery, setReportSearchQuery] = useState('');
+
+  // What-if / provisional sandbox adjustments state
+  const [provisionalEntries, setProvisionalEntries] = useState<ReportProvisionalEntry[]>([
+    { provisionalId: 'PRV-101', accountName: 'Salary Expense A/C', debitAmount: 1200, creditAmount: 0, description: 'Accrued August outstanding salaries' },
+    { provisionalId: 'PRV-102', accountName: 'Employee Payable A/C', debitAmount: 0, creditAmount: 1200, description: 'Corresponding liability credit' }
+  ]);
+  const [showProvisionalModal, setShowProvisionalModal] = useState(false);
+  const [provAccount, setProvAccount] = useState('Salary Expense A/C');
+  const [provDr, setProvDr] = useState(0);
+  const [provCr, setProvCr] = useState(0);
+  const [provDesc, setProvDesc] = useState('');
+
+  // Report Annotations & Comments state
+  const [reportAnnotations, setReportAnnotations] = useState<ReportAnnotation[]>([
+    { annotationId: 'ANN-001', lineItemRef: 'Silicon Valley Bank', comment: 'Reconciled to statement balance — SJ, 08 Aug', createdBy: 'Sarah Jenkins', createdAt: '2026-08-08T10:00:00Z' },
+    { annotationId: 'ANN-002', lineItemRef: 'Salary Expense A/C', comment: 'Higher due to Senior Engineer hiring increments — Admin', createdBy: 'admin', createdAt: '2026-08-08T11:30:00Z' }
+  ]);
+  const [newAnnotationComment, setNewAnnotationComment] = useState('');
+  const [annotationLineRef, setAnnotationLineRef] = useState<string | null>(null);
+
+  // Custom Report Builder structures (relabels, subtotals, reorders)
+  const [customStructures, setCustomStructures] = useState<Array<{ accountId: number; customLabel: string; hidden: boolean }>>([
+    { accountId: 1, customLabel: 'SVB Operational Funds', hidden: false },
+    { accountId: 10, customLabel: 'Staff Net Salary Payable', hidden: false }
+  ]);
+  const [builderEditingAccountId, setBuilderEditingAccountId] = useState<number | null>(null);
+  const [builderCustomLabel, setBuilderCustomLabel] = useState('');
+
+  // Report Schedules & Distribution list
+  const [reportSchedules, setReportSchedules] = useState<Array<{ scheduleId: string; reportName: string; frequency: string; recipients: string; nextRun: string }>>([
+    { scheduleId: 'SCH-001', reportName: 'Balance Sheet', frequency: 'Monthly', recipients: 'finance@superenterprise.com', nextRun: '2026-08-31' },
+    { scheduleId: 'SCH-002', reportName: 'Trial Balance', frequency: 'Weekly', recipients: 'audits@superenterprise.com', nextRun: '2026-08-15' }
+  ]);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [schedReportName, setSchedReportName] = useState('Balance Sheet');
+  const [schedFreq, setSchedFreq] = useState('Monthly');
+  const [schedRecipients, setSchedRecipients] = useState('');
+
+  // Report Access Audit Trail Logs
+  const [reportAccessLogs, setReportAccessLogs] = useState<Array<{ logId: string; reportName: string; user: string; action: string; timestamp: string }>>([
+    { logId: 'LOG-R-01', reportName: 'Balance Sheet', user: 'admin', action: 'Generated Snapshot', timestamp: '2026-08-08T12:00:00Z' },
+    { logId: 'LOG-R-02', reportName: 'Profit & Loss', user: 'junior_accountant', action: 'Exported PDF', timestamp: '2026-08-08T12:15:00Z' },
+    { logId: 'LOG-R-03', reportName: 'Trial Balance', user: 'Sarah Jenkins', action: 'Added Annotation', timestamp: '2026-08-08T13:45:00Z' }
+  ]);
 
   // Chart Canvas Refs
   const salesExpensesChartRef = useRef<HTMLCanvasElement | null>(null);
@@ -1691,6 +1758,135 @@ export default function App() {
       }
       return doc;
     }));
+  };
+
+  // Reports Workspace Handlers
+  const handleCreateProvisionalEntry = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!provDesc) {
+      showToast('Validation Error: Description is required!', 'error');
+      return;
+    }
+    if (provDr === 0 && provCr === 0) {
+      showToast('Validation Error: Enter either Debit or Credit amount!', 'error');
+      return;
+    }
+
+    const created: ReportProvisionalEntry = {
+      provisionalId: `PRV-${Date.now().toString().slice(-3)}`,
+      accountName: provAccount,
+      debitAmount: Number(provDr || 0),
+      creditAmount: Number(provCr || 0),
+      description: provDesc
+    };
+
+    setProvisionalEntries([...provisionalEntries, created]);
+    setShowProvisionalModal(false);
+    setProvDr(0);
+    setProvCr(0);
+    setProvDesc('');
+    
+    // Log access audit trail
+    const logVal = {
+      logId: `LOG-R-${Date.now().toString().slice(-3)}`,
+      reportName: selectedReportType,
+      user: 'admin',
+      action: `Added Provisional: ${provDesc}`,
+      timestamp: new Date().toISOString()
+    };
+    setReportAccessLogs([logVal, ...reportAccessLogs]);
+    showToast(`Added provisional adjustment: ${provDesc} (Sandboxed)`, 'success');
+  };
+
+  const handleDeleteProvisionalEntry = (id: string) => {
+    setProvisionalEntries(provisionalEntries.filter(p => p.provisionalId !== id));
+    showToast('Removed sandboxed provisional adjustment.', 'warning');
+  };
+
+  const handleCreateReportAnnotation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAnnotationComment || !annotationLineRef) return;
+
+    const created: ReportAnnotation = {
+      annotationId: `ANN-${Date.now().toString().slice(-3)}`,
+      lineItemRef: annotationLineRef,
+      comment: newAnnotationComment,
+      createdBy: 'admin',
+      createdAt: new Date().toISOString()
+    };
+
+    setReportAnnotations([...reportAnnotations, created]);
+    setNewAnnotationComment('');
+    setAnnotationLineRef(null);
+    showToast(`Annotation added to line [${annotationLineRef}]!`, 'success');
+  };
+
+  const handleDeleteReportAnnotation = (id: string) => {
+    setReportAnnotations(reportAnnotations.filter(a => a.annotationId !== id));
+    showToast('Deleted annotation.', 'warning');
+  };
+
+  const handleSaveCustomStructure = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (builderEditingAccountId === null) return;
+
+    const exists = customStructures.some(s => s.accountId === builderEditingAccountId);
+    let updated;
+    if (exists) {
+      updated = customStructures.map(s => s.accountId === builderEditingAccountId ? { ...s, customLabel: builderCustomLabel } : s);
+    } else {
+      updated = [...customStructures, { accountId: builderEditingAccountId, customLabel: builderCustomLabel, hidden: false }];
+    }
+
+    setCustomStructures(updated);
+    setBuilderEditingAccountId(null);
+    setBuilderCustomLabel('');
+    showToast('Report structure relabeling updated!', 'success');
+  };
+
+  const handleCreateReportSchedule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schedRecipients) {
+      showToast('Validation Error: Recipients email is required!', 'error');
+      return;
+    }
+
+    const created = {
+      scheduleId: `SCH-${Date.now().toString().slice(-3)}`,
+      reportName: schedReportName,
+      frequency: schedFreq,
+      recipients: schedRecipients,
+      nextRun: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    };
+
+    setReportSchedules([...reportSchedules, created]);
+    setShowScheduleModal(false);
+    setSchedRecipients('');
+    showToast(`Scheduled ${schedReportName} delivery to ${schedRecipients}!`, 'success');
+  };
+
+  const handleDeleteReportSchedule = (id: string) => {
+    setReportSchedules(reportSchedules.filter(s => s.scheduleId !== id));
+    showToast('Cancelled report subscription schedule.', 'warning');
+  };
+
+  // Auditor Pack Generation Simulator
+  const handleExportAuditorPack = () => {
+    showToast('Compiling Balance Sheet, P&L, Trial Balance, and documents...', 'success');
+    
+    // Log audit log
+    const logVal = {
+      logId: `LOG-R-${Date.now().toString().slice(-3)}`,
+      reportName: 'Auditor Pack',
+      user: 'admin',
+      action: 'Exported ZIP Auditor Pack',
+      timestamp: new Date().toISOString()
+    };
+    setReportAccessLogs([logVal, ...reportAccessLogs]);
+
+    setTimeout(() => {
+      showToast('ZIP Auditor Pack (auditor_bundle_fy_2026.zip) generated successfully!', 'success');
+    }, 1500);
   };
 
   // Initialize Dual Bar Charts on Dashboard view
@@ -4888,60 +5084,1039 @@ export default function App() {
         );
       }
 
-      case 'reports':
+      case 'reports': {
+        // Dynamic balance calculator incorporating posted vouchers + provisional adjustments
+        const getAccountBalance = (accountId: number) => {
+          const ledger = ledgers.find(l => l.id === accountId);
+          if (!ledger) return 0;
+          let bal = ledger.openingBalance;
+          vouchers.forEach(v => {
+            if (v.status !== 'Posted') return;
+            v.lines.forEach(line => {
+              if (line.accountId === accountId) {
+                if (ledger.dc === 'DEBIT') {
+                  bal += Number(line.debitAmount || 0) - Number(line.creditAmount || 0);
+                } else {
+                  bal += Number(line.creditAmount || 0) - Number(line.debitAmount || 0);
+                }
+              }
+            });
+          });
+          
+          // Add sandboxed provisional adjustments
+          provisionalEntries.forEach(p => {
+            if (p.accountName === ledger.name) {
+              if (ledger.dc === 'DEBIT') {
+                bal += Number(p.debitAmount || 0) - Number(p.creditAmount || 0);
+              } else {
+                bal += Number(p.creditAmount || 0) - Number(p.debitAmount || 0);
+              }
+            }
+          });
+          return bal;
+        };
+
+        // Extract key account balances
+        const svbBal = getAccountBalance(1);
+        const salesBal = getAccountBalance(2);
+        const officeExpBal = getAccountBalance(3);
+        const pettyCashBal = getAccountBalance(4);
+        const equityBal = getAccountBalance(5);
+        const creditorBal = getAccountBalance(6);
+        const assetBal = getAccountBalance(7);
+        const deprecBal = getAccountBalance(8);
+        const salaryExpBal = getAccountBalance(9);
+        const empPayableBal = getAccountBalance(10);
+        const pfPayableBal = getAccountBalance(11);
+        const tdsPayableBal = getAccountBalance(12);
+        const employerPfExpBal = getAccountBalance(13);
+
+        // Sub-totals calculations
+        const totalGrossRevenue = salesBal;
+        const totalExpenses = officeExpBal + salaryExpBal + employerPfExpBal;
+        const netProfit = totalGrossRevenue - totalExpenses;
+
+        const currentAssets = svbBal + pettyCashBal;
+        const currentLiabilities = creditorBal + empPayableBal + pfPayableBal + tdsPayableBal;
+        const totalAssets = currentAssets + assetBal;
+        const totalLiabilitiesAndEquity = currentLiabilities + deprecBal + equityBal + netProfit;
+
+        // Custom labels helper
+        const getAccountLabel = (accountId: number, defaultLabel: string) => {
+          const custom = customStructures.find(s => s.accountId === accountId);
+          return custom ? custom.customLabel : defaultLabel;
+        };
+
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold font-manrope text-[#161B33]">Financial Reports & Audits</h2>
-                  <p className="text-xs text-[#5B6178] mt-1">Generate statutory financial statements, balance sheets, and audit books</p>
-                </div>
+            {/* WORKSPACE HEADER */}
+            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold font-manrope text-[#161B33]">Statutory Reports & Ratios Engine</h2>
+                <p className="text-xs text-[#5B6178] mt-1">
+                  Interactive drill-editing reporting ledger, provisional what-if sandboxing, and compliance packages exports.
+                </p>
+              </div>
+
+              {/* TABS SELECTOR */}
+              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 text-xs font-bold select-none">
                 <button 
-                  onClick={() => showToast('Auditor Pack generated. ZIP download started.', 'success')}
-                  className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition"
+                  onClick={() => { setActiveReportTab('library'); setSelectedDrillDownAccount(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeReportTab === 'library' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
                 >
-                  Export Auditor Pack
+                  Report Library
+                </button>
+                <button 
+                  onClick={() => { setActiveReportTab('builder'); setSelectedDrillDownAccount(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeReportTab === 'builder' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Custom Builder
+                </button>
+                <button 
+                  onClick={() => { setActiveReportTab('schedules'); setSelectedDrillDownAccount(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeReportTab === 'schedules' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Schedules
+                </button>
+                <button 
+                  onClick={() => { setActiveReportTab('audit'); setSelectedDrillDownAccount(null); }}
+                  className={`px-3 py-1.5 rounded transition ${activeReportTab === 'audit' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600 hover:text-[#10163A]'}`}
+                >
+                  Access Audit
                 </button>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="border border-slate-200 rounded-lg p-5 bg-slate-50 space-y-3">
-                  <h4 className="font-extrabold text-base font-manrope text-[#10163A]">Balance Sheet</h4>
-                  <p className="text-xs text-slate-600">Detailed snapshot of assets, liabilities, and equity balances.</p>
-                  <button 
-                    onClick={() => setActiveReport('Balance Sheet')}
-                    className="w-full text-center border border-[#12A594] text-[#12A594] bg-white hover:bg-teal-50 px-3 py-2 rounded-md text-xs font-extrabold transition"
-                  >
-                    View Report
-                  </button>
+            {/* DMS SUB-TAB: REPORT LIBRARY */}
+            {activeReportTab === 'library' && (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {/* LEFT LIST: 10 REPORT TYPES */}
+                <div className="lg:col-span-1 bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-800 tracking-wide block border-b pb-2">Financial Report Library</span>
+                  <div className="text-xs font-semibold text-slate-600 space-y-1.5">
+                    {[
+                      'Balance Sheet', 'Profit & Loss', 'Trial Balance', 'Cash Flow', 
+                      'General Ledger', 'Day Book', 'Ratio Analysis', 'GST Report', 
+                      'Aging Report', 'Budget vs Actual'
+                    ].map(rName => (
+                      <div 
+                        key={rName}
+                        onClick={() => { setSelectedReportType(rName); setSelectedDrillDownAccount(null); }}
+                        className={`p-2.5 rounded cursor-pointer transition flex justify-between items-center ${
+                          selectedReportType === rName ? 'bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-600' : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <span>{rName}</span>
+                        <span className="material-icons-round text-sm">chevron_right</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="border border-slate-200 rounded-lg p-5 bg-slate-50 space-y-3">
-                  <h4 className="font-extrabold text-base font-manrope text-[#10163A]">Profit & Loss</h4>
-                  <p className="text-xs text-slate-600">Trading summary showing sales revenues and operating expenses.</p>
-                  <button 
-                    onClick={() => setActiveReport('Profit & Loss Statement')}
-                    className="w-full text-center border border-[#12A594] text-[#12A594] bg-white hover:bg-teal-50 px-3 py-2 rounded-md text-xs font-extrabold transition"
-                  >
-                    View Report
-                  </button>
-                </div>
+                {/* RIGHT AREA: THE INTERACTIVE REPORT ENGINE */}
+                <div className="lg:col-span-3 space-y-6">
+                  {/* RIBBON FILTERS & CONTROLS */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {/* Comparison selection */}
+                      <select 
+                        value={comparisonPeriod}
+                        onChange={e => setComparisonPeriod(e.target.value as any)}
+                        className="p-2 border rounded bg-white text-xs font-bold text-slate-600 focus:outline-none"
+                      >
+                        <option value="none">No Comparison</option>
+                        <option value="previous">Compare vs Previous Period</option>
+                        <option value="priorYear">Compare vs Same Period Last Year</option>
+                      </select>
 
-                <div className="border border-slate-200 rounded-lg p-5 bg-slate-50 space-y-3">
-                  <h4 className="font-extrabold text-base font-manrope text-[#10163A]">Trial Balance</h4>
-                  <p className="text-xs text-slate-600">Parity checks comparing debit balances vs credit balances.</p>
-                  <button 
-                    onClick={() => setActiveReport('Trial Balance Parity Check')}
-                    className="w-full text-center border border-[#12A594] text-[#12A594] bg-white hover:bg-teal-50 px-3 py-2 rounded-md text-xs font-extrabold transition"
-                  >
-                    View Report
-                  </button>
+                      {/* Table / Chart Toggle */}
+                      <div className="flex bg-slate-100 p-0.5 rounded border text-[11px] font-bold">
+                        <button 
+                          onClick={() => setReportViewMode('table')}
+                          className={`px-2.5 py-1 rounded transition ${reportViewMode === 'table' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600'}`}
+                        >
+                          Table
+                        </button>
+                        <button 
+                          onClick={() => setReportViewMode('chart')}
+                          className={`px-2.5 py-1 rounded transition ${reportViewMode === 'chart' ? 'bg-[#10163A] text-white shadow-sm' : 'text-slate-600'}`}
+                        >
+                          Chart View
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => setShowProvisionalModal(true)}
+                        className="border border-[#12A594] text-[#12A594] hover:bg-teal-50 px-3 py-2 rounded text-xs font-extrabold transition"
+                      >
+                        + Add Sandbox Entry
+                      </button>
+                      <button 
+                        onClick={handleExportAuditorPack}
+                        className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-2 rounded text-xs font-extrabold transition"
+                      >
+                        Export Auditor ZIP Pack
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PROVISIONAL ENTRIES WARNING BANNER */}
+                  {provisionalEntries.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs font-semibold text-amber-800 flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="material-icons-round text-lg text-amber-600">warning</span>
+                        <div>
+                          <div className="font-extrabold uppercase text-[10px]">What-If Provisional Sandbox Active</div>
+                          <div className="text-amber-600">Calculations reflect {provisionalEntries.length} sandboxed adjusting entries.</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {provisionalEntries.map(p => (
+                          <div key={p.provisionalId} className="bg-amber-100 border border-amber-300 rounded px-2.5 py-1 flex items-center gap-1.5 font-mono text-[10px]">
+                            <span>{p.accountName}: ${p.debitAmount || p.creditAmount}</span>
+                            <button onClick={() => handleDeleteProvisionalEntry(p.provisionalId)} className="text-rose-600 font-bold">×</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* REPORT VIEWER CONTAINER */}
+                  <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                    <div className="border-b pb-4 flex justify-between items-center">
+                      <div>
+                        <h3 className="font-extrabold text-base text-[#161B33] font-manrope">{selectedReportType}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">Fiscal Period: August 2026 • Reporting Base: Live General Ledger balances</p>
+                      </div>
+                      <span className="bg-slate-100 border px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 font-mono">FY 2026-27</span>
+                    </div>
+
+                    {/* REPORT TABLE VIEW */}
+                    {reportViewMode === 'table' && (
+                      <div className="overflow-x-auto text-xs font-semibold text-slate-800">
+                        {/* 1. BALANCE SHEET */}
+                        {selectedReportType === 'Balance Sheet' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">EQUITY & LIABILITIES</th>
+                                <th className="py-2.5 text-right">BALANCE</th>
+                                {comparisonPeriod !== 'none' && <th className="py-2.5 text-right">PRIOR PERIOD</th>}
+                                {comparisonPeriod !== 'none' && <th className="py-2.5 text-right">VARIANCE %</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {/* Equity */}
+                              <tr><td className="py-3 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Shareholder's Equity</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">{getAccountLabel(5, 'Equity Capital A/c')}</td>
+                                <td className="py-2 text-right font-mono font-bold">${equityBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">${equityBal.toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+                              {/* Profit */}
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Retained Earnings (Net Profit YTD)</td>
+                                <td className="py-2 text-right font-mono font-bold text-emerald-600">${netProfit.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">$10,450</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-emerald-600">+10.5%</td>}
+                              </tr>
+
+                              {/* Liabilities */}
+                              <tr><td className="py-3 pt-4 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Current Liabilities</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">{getAccountLabel(10, 'Employee Payable A/C')}</td>
+                                <td className="py-2 text-right font-mono font-bold">${empPayableBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">${empPayableBal.toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">{getAccountLabel(11, 'PF Payable A/C')}</td>
+                                <td className="py-2 text-right font-mono font-bold">${pfPayableBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">${pfPayableBal.toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+
+                              {/* Asset section */}
+                              <tr className="border-t-2 border-slate-300 font-extrabold bg-slate-50">
+                                <td className="py-3">TOTAL LIABILITIES & EQUITY</td>
+                                <td className="py-3 text-right font-mono">${totalLiabilitiesAndEquity.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-slate-400">${(totalLiabilitiesAndEquity - 1500).toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-emerald-600">+1.2%</td>}
+                              </tr>
+
+                              {/* ASSETS */}
+                              <tr><td className="py-4 pt-6 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Fixed Assets</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Machinery Asset A/c</td>
+                                <td className="py-2 text-right font-mono font-bold">${assetBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">${assetBal.toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Depreciation Reserve</td>
+                                <td className="py-2 text-right font-mono font-bold text-rose-500">-${deprecBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">-$5,000</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+
+                              <tr><td className="py-3 pt-4 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Current Assets</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">{getAccountLabel(1, 'Silicon Valley Bank')}</td>
+                                <td className="py-2 text-right font-mono font-bold">${svbBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">${svbBal.toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+
+                              <tr className="border-t-2 border-slate-300 font-extrabold bg-slate-50">
+                                <td className="py-3">TOTAL ASSETS</td>
+                                <td className="py-3 text-right font-mono">${totalAssets.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-slate-400">${(totalAssets - 1500).toLocaleString()}</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-emerald-600">+1.2%</td>}
+                              </tr>
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* 2. PROFIT & LOSS */}
+                        {selectedReportType === 'Profit & Loss' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">INCOME & EXPENSES</th>
+                                <th className="py-2.5 text-right">BALANCE</th>
+                                {comparisonPeriod !== 'none' && <th className="py-2.5 text-right">PRIOR PERIOD</th>}
+                                {comparisonPeriod !== 'none' && <th className="py-2.5 text-right">VARIANCE %</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr><td className="py-3 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Operating Revenue</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Sales Revenues (Acme Corp Sales A/C)</td>
+                                <td className="py-2 text-right font-mono font-bold text-emerald-600">${salesBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">$12,850</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-emerald-600">+12.5%</td>}
+                              </tr>
+
+                              <tr><td className="py-3 pt-4 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={4}>Operating Expenditures</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Office & Indirect Expenses</td>
+                                <td className="py-2 text-right font-mono font-bold text-rose-500">-${officeExpBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">-$2,400</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">0.0%</td>}
+                              </tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Employee Gross Salary Expense</td>
+                                <td className="py-2 text-right font-mono font-bold text-rose-500">-${salaryExpBal.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-slate-400">-$0</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-2 text-right font-mono text-rose-500">+100%</td>}
+                              </tr>
+
+                              <tr className="border-t-2 border-slate-300 font-extrabold bg-slate-50">
+                                <td className="py-3 uppercase">Net Profit / Retained Earnings</td>
+                                <td className="py-3 text-right font-mono text-emerald-600">${netProfit.toLocaleString()}</td>
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-slate-400">$10,450</td>}
+                                {comparisonPeriod !== 'none' && <td className="py-3 text-right font-mono text-emerald-600">+10.5%</td>}
+                              </tr>
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* 3. TRIAL BALANCE WITH DRILLDOWN EXPANDERS */}
+                        {selectedReportType === 'Trial Balance' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">LEDGER ACCOUNT NAME</th>
+                                <th className="py-2.5 text-right">DEBIT ($)</th>
+                                <th className="py-2.5 text-right">CREDIT ($)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {ledgers.map(ledger => {
+                                const bal = getAccountBalance(ledger.id);
+                                const isExpanded = selectedDrillDownAccount === ledger.id;
+
+                                // Filter vouchers that touch this account
+                                const contributingLines = vouchers.flatMap(v => {
+                                  if (v.status !== 'Posted') return [];
+                                  return v.lines.filter(l => l.accountId === ledger.id).map(l => ({
+                                    voucherId: v.voucherId,
+                                    voucherNumber: v.voucherNumber,
+                                    date: v.date,
+                                    narration: v.narration,
+                                    debit: l.debitAmount,
+                                    credit: l.creditAmount
+                                  }));
+                                });
+
+                                return (
+                                  <React.Fragment key={ledger.id}>
+                                    <tr 
+                                      onClick={() => setSelectedDrillDownAccount(isExpanded ? null : ledger.id)}
+                                      className="border-b border-slate-100 hover:bg-indigo-50/30 cursor-pointer transition"
+                                    >
+                                      <td className="py-2.5 font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span className="material-icons-round text-sm text-slate-400">
+                                          {isExpanded ? 'expand_more' : 'chevron_right'}
+                                        </span>
+                                        <span>{ledger.name}</span>
+                                        <span className="font-mono text-[9px] bg-slate-100 text-slate-400 px-1.5 rounded">{ledger.code}</span>
+                                      </td>
+                                      <td className="py-2.5 text-right font-mono font-semibold text-slate-700">
+                                        {ledger.dc === 'DEBIT' ? `$${bal.toLocaleString()}` : '--'}
+                                      </td>
+                                      <td className="py-2.5 text-right font-mono font-semibold text-slate-700">
+                                        {ledger.dc === 'CREDIT' ? `$${bal.toLocaleString()}` : '--'}
+                                      </td>
+                                    </tr>
+
+                                    {/* DRILLDOWN TRANSACTIONS VIEW */}
+                                    {isExpanded && (
+                                      <tr>
+                                        <td colSpan={3} className="bg-slate-50/80 p-4 border rounded">
+                                          <div className="space-y-2">
+                                            <div className="text-[10px] font-extrabold uppercase text-slate-600">Contributing Ledger Entries (Click to inspect voucher)</div>
+                                            {contributingLines.length > 0 ? (
+                                              <div className="space-y-1.5">
+                                                {contributingLines.map((line, idx) => (
+                                                  <div 
+                                                    key={idx}
+                                                    onClick={() => {
+                                                      const matchedV = vouchers.find(v => v.voucherId === line.voucherId);
+                                                      if (matchedV) {
+                                                        setSelectedVoucher(matchedV);
+                                                        openTab('transactions', 'Transactions', 'transactions');
+                                                      }
+                                                    }}
+                                                    className="bg-white border rounded p-2 text-[10px] flex justify-between items-center cursor-pointer hover:border-indigo-300 transition"
+                                                  >
+                                                    <div>
+                                                      <span className="font-bold text-[#10163A]">{line.voucherNumber}</span>
+                                                      <span className="text-slate-400 font-semibold ml-2">{line.date} • {line.narration}</span>
+                                                    </div>
+                                                    <span className="font-mono font-bold text-slate-600">
+                                                      {line.debit > 0 ? `Dr: $${line.debit}` : `Cr: $${line.credit}`}
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <div className="text-slate-400 font-semibold italic">No active transactions posted to this ledger.</div>
+                                            )}
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* GENERAL LEDGER REPORT */}
+                        {selectedReportType === 'General Ledger' && (
+                          <div className="space-y-6">
+                            {ledgers.map(ledger => {
+                              const bal = getAccountBalance(ledger.id);
+                              
+                              // Extract voucher splits that touch this ledger
+                              const lines = vouchers.flatMap(v => {
+                                if (v.status !== 'Posted') return [];
+                                return v.lines.filter(l => l.accountId === ledger.id).map(l => ({
+                                  voucherId: v.voucherId,
+                                  voucherNumber: v.voucherNumber,
+                                  date: v.date,
+                                  narration: v.narration,
+                                  debit: l.debitAmount,
+                                  credit: l.creditAmount
+                                }));
+                              });
+
+                              return (
+                                <div key={ledger.id} className="border rounded-lg bg-slate-50/50 p-4 space-y-3">
+                                  <div className="flex justify-between items-center border-b pb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-extrabold text-indigo-700 font-mono bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded text-[11px]">
+                                        {ledger.code}
+                                      </span>
+                                      <span className="font-bold text-slate-800 text-sm">{ledger.name}</span>
+                                    </div>
+                                    <span className="font-mono text-xs font-bold text-[#10163A]">
+                                      Closing Balance: ${bal.toLocaleString()} ({ledger.dc})
+                                    </span>
+                                  </div>
+
+                                  <div className="overflow-x-auto text-[10px]">
+                                    <table className="w-full text-left border-collapse">
+                                      <thead>
+                                        <tr className="border-b text-slate-400 font-extrabold uppercase">
+                                          <th className="py-1">Date</th>
+                                          <th className="py-1">Voucher No</th>
+                                          <th className="py-1">Description / Narration</th>
+                                          <th className="py-1 text-right">Debit ($)</th>
+                                          <th className="py-1 text-right">Credit ($)</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y font-semibold text-slate-700">
+                                        {lines.map((line, idx) => (
+                                          <tr key={idx} className="hover:bg-white transition">
+                                            <td className="py-1.5 font-mono">{line.date}</td>
+                                            <td className="py-1.5 font-bold text-slate-900">{line.voucherNumber}</td>
+                                            <td className="py-1.5">{line.narration}</td>
+                                            <td className="py-1.5 text-right font-mono">{line.debit > 0 ? `$${line.debit.toLocaleString()}` : '--'}</td>
+                                            <td className="py-1.5 text-right font-mono">{line.credit > 0 ? `$${line.credit.toLocaleString()}` : '--'}</td>
+                                          </tr>
+                                        ))}
+                                        {lines.length === 0 && (
+                                          <tr>
+                                            <td colSpan={5} className="py-2 text-center text-slate-400 font-semibold italic bg-white">
+                                              No posted transactions in this period.
+                                            </td>
+                                          </tr>
+                                        )}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* DAY BOOK CHRONOLOGICAL VIEW */}
+                        {selectedReportType === 'Day Book' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">DATE</th>
+                                <th className="py-2.5">VOUCHER NUMBER</th>
+                                <th className="py-2.5">VOUCHER TYPE</th>
+                                <th className="py-2.5">NARRATION</th>
+                                <th className="py-2.5 text-right">TOTAL DR ($)</th>
+                                <th className="py-2.5 text-right">TOTAL CR ($)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {vouchers
+                                .filter(v => v.status === 'Posted')
+                                .sort((a, b) => b.date.localeCompare(a.date))
+                                .map(v => (
+                                  <tr 
+                                    key={v.voucherId} 
+                                    onClick={() => {
+                                      setSelectedVoucher(v);
+                                      openTab('transactions', 'Transactions', 'transactions');
+                                    }}
+                                    className="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer"
+                                  >
+                                    <td className="py-3 font-mono font-bold text-slate-500">{v.date}</td>
+                                    <td className="py-3 font-bold text-[#10163A]">{v.voucherNumber}</td>
+                                    <td className="py-3 text-[10px]">
+                                      <span className="bg-slate-100 border text-slate-600 px-2 py-0.5 rounded font-extrabold uppercase font-mono">
+                                        {v.voucherType}
+                                      </span>
+                                    </td>
+                                    <td className="py-3 text-slate-600 font-semibold max-w-xs truncate">{v.narration}</td>
+                                    <td className="py-3 text-right font-mono font-bold text-slate-700">${v.totalDebit.toLocaleString()}</td>
+                                    <td className="py-3 text-right font-mono font-bold text-slate-700">${v.totalCredit.toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* 4. CASH FLOW STATEMENT */}
+                        {selectedReportType === 'Cash Flow' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">CASH FLOW CATEGORY</th>
+                                <th className="py-2.5 text-right">INFLOW / OUTFLOW ($)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr><td className="py-3 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={2}>Operating Activities</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Net profit before adjustments</td>
+                                <td className="py-2 text-right font-mono font-semibold text-emerald-600">${netProfit.toLocaleString()}</td>
+                              </tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Adjustments for PF Liabilities changes</td>
+                                <td className="py-2 text-right font-mono font-semibold text-emerald-600">+${pfPayableBal.toLocaleString()}</td>
+                              </tr>
+
+                              <tr><td className="py-3 pt-4 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={2}>Investing Activities</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Purchases of Machinery Assets</td>
+                                <td className="py-2 text-right font-mono font-semibold text-rose-500">-${assetBal.toLocaleString()}</td>
+                              </tr>
+
+                              <tr><td className="py-3 pt-4 font-extrabold text-slate-800 uppercase text-[10px]" colSpan={2}>Financing Activities</td></tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2 pl-4">Equity Capital Infusions</td>
+                                <td className="py-2 text-right font-mono font-semibold text-emerald-600">+${equityBal.toLocaleString()}</td>
+                              </tr>
+
+                              <tr className="border-t-2 border-slate-300 font-extrabold bg-slate-50">
+                                <td className="py-3 uppercase">Net Increase in Cash & Bank Cashbook</td>
+                                <td className="py-3 text-right font-mono text-emerald-600">${(svbBal + pettyCashBal).toLocaleString()}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* 5. RATIO ANALYSIS */}
+                        {selectedReportType === 'Ratio Analysis' && (
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2 text-center">
+                              <span className="font-extrabold text-slate-400 uppercase text-[9px] block">Current Ratio</span>
+                              <span className="font-extrabold font-mono text-[#10163A] text-xl">
+                                {(currentAssets / (currentLiabilities || 1)).toFixed(2)}x
+                              </span>
+                              <span className="text-[9px] text-slate-500 block leading-tight">Formula: Current Assets / Current Liabilities. Benchmark: 2.0x</span>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2 text-center">
+                              <span className="font-extrabold text-slate-400 uppercase text-[9px] block">Quick Ratio</span>
+                              <span className="font-extrabold font-mono text-[#10163A] text-xl">
+                                {(currentAssets / (currentLiabilities || 1)).toFixed(2)}x
+                              </span>
+                              <span className="text-[9px] text-slate-500 block leading-tight">Formula: Quick Assets / Current Liabilities. Benchmark: 1.0x</span>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2 text-center">
+                              <span className="font-extrabold text-slate-400 uppercase text-[9px] block">Debt-to-Equity</span>
+                              <span className="font-extrabold font-mono text-[#10163A] text-xl">
+                                {(currentLiabilities / (equityBal || 1)).toFixed(3)}x
+                              </span>
+                              <span className="text-[9px] text-slate-500 block leading-tight">Formula: Liabilities / Equity Capital. Benchmark: &lt; 0.5x</span>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2 text-center">
+                              <span className="font-extrabold text-slate-400 uppercase text-[9px] block">Return on Investment (ROI)</span>
+                              <span className="font-extrabold font-mono text-emerald-600 text-xl">
+                                {((netProfit / (equityBal || 1)) * 100).toFixed(2)}%
+                              </span>
+                              <span className="text-[9px] text-slate-500 block leading-tight">Formula: Net Profit / Equity Capital * 100.</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 6. GST REPORTS */}
+                        {selectedReportType === 'GST Report' && (
+                          <div className="space-y-6">
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+                              <div className="flex justify-between items-center border-b pb-1.5">
+                                <span className="font-extrabold text-indigo-700 text-[10px] uppercase">GSTR-1 Sales Report Summary</span>
+                                <span className="bg-[#EAF5EE] text-[#2E9E5B] border px-2 py-0.2 rounded font-extrabold text-[9px] uppercase">Ready to File</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4 text-xs font-semibold">
+                                <div className="flex justify-between">
+                                  <span>Total Outward Taxable Sales:</span>
+                                  <span className="font-mono font-bold">${salesBal.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Integrated GST (IGST @ 18%):</span>
+                                  <span className="font-mono font-bold">${(salesBal * 0.18).toLocaleString()}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-3">
+                              <div className="flex justify-between items-center border-b pb-1.5">
+                                <span className="font-extrabold text-indigo-700 text-[10px] uppercase">Input Tax Credit (ITC) Reconciliation</span>
+                                <span className="text-[9px] text-slate-400 font-bold font-mono">Matched to GSTR-2B</span>
+                              </div>
+                              <div className="text-xs font-semibold leading-relaxed text-slate-600">
+                                All outward purchase bills are matched with supplier invoices. Eligible ITC: <span className="font-mono font-bold text-slate-800">$1,450.00</span>. CGST/SGST reconciliations matched successfully.
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 7. AGING REPORT */}
+                        {selectedReportType === 'Aging Report' && (
+                          <div className="space-y-4">
+                            <div className="font-extrabold text-xs text-slate-800 uppercase tracking-wide">Accounts Receivable Aging Buckets</div>
+                            <div className="grid grid-cols-5 gap-3 text-center font-mono font-bold text-xs">
+                              <div className="border p-2 bg-slate-50 rounded">
+                                <div className="text-[8px] font-bold text-slate-400 uppercase">0-30 Days</div>
+                                <div className="text-[#10163A] mt-1">${(salesBal * 0.75).toLocaleString()}</div>
+                              </div>
+                              <div className="border p-2 bg-slate-50 rounded">
+                                <div className="text-[8px] font-bold text-slate-400 uppercase">30-60 Days</div>
+                                <div className="text-[#10163A] mt-1">${(salesBal * 0.2).toLocaleString()}</div>
+                              </div>
+                              <div className="border p-2 bg-slate-50 rounded">
+                                <div className="text-[8px] font-bold text-slate-400 uppercase">60-90 Days</div>
+                                <div className="text-[#10163A] mt-1">${(salesBal * 0.05).toLocaleString()}</div>
+                              </div>
+                              <div className="border p-2 bg-slate-50 rounded">
+                                <div className="text-[8px] font-bold text-slate-400 uppercase">90+ Days</div>
+                                <div className="text-rose-500 mt-1">$0</div>
+                              </div>
+                              <div className="bg-indigo-50 border border-indigo-200 p-2 rounded">
+                                <div className="text-[8px] font-bold text-indigo-500 uppercase">Total Receivables</div>
+                                <div className="text-indigo-700 mt-1">${salesBal.toLocaleString()}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 8. BUDGET VS ACTUAL */}
+                        {selectedReportType === 'Budget vs Actual' && (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-[#E1E5EC] text-slate-400 font-bold text-[9px] uppercase tracking-wider">
+                                <th className="py-2.5">EXPENSE ACCOUNT NAME</th>
+                                <th className="py-2.5 text-right">BUDGET ALLOCATION ($)</th>
+                                <th className="py-2.5 text-right">ACTUAL SPEND ($)</th>
+                                <th className="py-2.5 text-right">VARIANCE BALANCE</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2">Office & Indirect Expenses</td>
+                                <td className="py-2 text-right font-mono font-bold">$5,000</td>
+                                <td className="py-2 text-right font-mono font-bold text-slate-700">${officeExpBal.toLocaleString()}</td>
+                                <td className="py-2 text-right font-mono font-bold text-emerald-600">+${(5000 - officeExpBal).toLocaleString()}</td>
+                              </tr>
+                              <tr className="border-b border-slate-100 hover:bg-slate-50 transition">
+                                <td className="py-2">Employee Salary Expenses</td>
+                                <td className="py-2 text-right font-mono font-bold">$30,000</td>
+                                <td className="py-2 text-right font-mono font-bold text-slate-700">${salaryExpBal.toLocaleString()}</td>
+                                <td className="py-2 text-right font-mono font-bold text-emerald-600">+${(30000 - salaryExpBal).toLocaleString()}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+
+                    {/* REPORT CHART VIEW */}
+                    {reportViewMode === 'chart' && (
+                      <div className="border border-dashed p-8 rounded-lg flex flex-col items-center justify-center space-y-4 bg-slate-50/50">
+                        <span className="material-icons-round text-3xl text-indigo-600">bar_chart</span>
+                        <div className="text-center">
+                          <div className="font-extrabold text-sm text-slate-800">Visualizing Trend Charts</div>
+                          <p className="text-xs text-slate-500 mt-1 max-w-sm">Expense allocation vs Sales Revenues trend charts are plotted dynamically using the dashboard modules configs.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* DMS SUB-TAB: CUSTOM REPORT BUILDER */}
+            {activeReportTab === 'builder' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* LEFT BUILDER CONTROLS */}
+                <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-5 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                    Structure Customizer
+                  </div>
+                  <form onSubmit={handleSaveCustomStructure} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Select Account to Custom Relabel</label>
+                      <select 
+                        value={builderEditingAccountId || 1} 
+                        onChange={e => setBuilderEditingAccountId(Number(e.target.value))}
+                        className="w-full p-2 border rounded bg-white text-slate-800 font-bold"
+                      >
+                        {ledgers.map(l => (
+                          <option key={l.id} value={l.id}>{l.code} - {l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Custom Label Name</label>
+                      <input 
+                        type="text" 
+                        value={builderCustomLabel}
+                        onChange={e => setBuilderCustomLabel(e.target.value)}
+                        placeholder="e.g. SVB Operating cash A/c"
+                        className="w-full p-2 border rounded text-slate-800"
+                        required
+                      />
+                    </div>
+
+                    <button 
+                      type="submit"
+                      className="w-full text-center bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition"
+                    >
+                      Save Custom Label
+                    </button>
+                  </form>
+                </div>
+
+                {/* RIGHT CUSTOMIZATIONS PREVIEW */}
+                <div className="md:col-span-2 bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                  <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                    Custom Account Structural Groupings & Relabels
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                          <th className="py-2.5">LEDGER CODE</th>
+                          <th className="py-2.5">ORIGINAL NAME</th>
+                          <th className="py-2.5">CUSTOM TEMPLATE LABEL</th>
+                          <th className="py-2.5 text-right">STATUS</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold">
+                        {customStructures.map(s => {
+                          const ledger = ledgers.find(l => l.id === s.accountId);
+                          return (
+                            <tr key={s.accountId} className="hover:bg-slate-50 transition">
+                              <td className="py-2.5 font-mono text-[10px] font-bold text-slate-400">{ledger?.code}</td>
+                              <td className="py-2.5 text-slate-700">{ledger?.name}</td>
+                              <td className="py-2.5 text-indigo-700 font-bold">{s.customLabel}</td>
+                              <td className="py-2.5 text-right">
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-300 px-2 py-0.2 rounded text-[9px] uppercase font-bold">Relabeled</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* DMS SUB-TAB: SCHEDULES */}
+            {activeReportTab === 'schedules' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <h3 className="font-extrabold text-base text-[#161B33] font-manrope">Scheduled Email Report Subscriptions</h3>
+                    <p className="text-xs text-slate-500 mt-0.5">Automate report distributions to auditors, stakeholders, and executives on a cadence.</p>
+                  </div>
+                  <button 
+                    onClick={() => setShowScheduleModal(true)}
+                    className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded text-xs font-bold transition"
+                  >
+                    + Create Schedule
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E1E5EC] text-[#5B6178] font-extrabold uppercase text-[10px] tracking-wider">
+                        <th className="py-3 px-2">SCHEDULE ID</th>
+                        <th className="py-3 px-2">REPORT TYPE</th>
+                        <th className="py-3 px-2">FREQUENCY</th>
+                        <th className="py-3 px-2">RECIPIENTS EMAIL</th>
+                        <th className="py-3 px-2">NEXT DISPATCH DATE</th>
+                        <th className="py-3 px-2 text-right">ACTION</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E1E5EC] text-[#161B33] font-semibold">
+                      {reportSchedules.map(s => (
+                        <tr key={s.scheduleId} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-2 font-mono font-bold text-slate-400">{s.scheduleId}</td>
+                          <td className="py-3 px-2 font-bold text-[#10163A]">{s.reportName}</td>
+                          <td className="py-3 px-2 text-indigo-700 uppercase font-bold text-[10px]">{s.frequency}</td>
+                          <td className="py-3 px-2 font-mono text-slate-600">{s.recipients}</td>
+                          <td className="py-3 px-2 font-mono font-bold text-slate-500">{s.nextRun}</td>
+                          <td className="py-3 px-2 text-right">
+                            <button 
+                              onClick={() => handleDeleteReportSchedule(s.scheduleId)}
+                              className="text-rose-600 hover:text-rose-700 text-[10px] font-bold uppercase"
+                            >
+                              Cancel
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* DMS SUB-TAB: ACCESS AUDIT */}
+            {activeReportTab === 'audit' && (
+              <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-4">
+                <div className="font-extrabold text-xs text-slate-800 border-b pb-2 uppercase tracking-wide">
+                  Financial Reports Generation Access Logs
+                </div>
+                <div className="overflow-x-auto font-mono text-xs font-semibold text-slate-600">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E1E5EC] text-slate-400 text-[10px] font-bold uppercase">
+                        <th className="py-2.5">LOG ID</th>
+                        <th className="py-2.5">REPORT TARGET</th>
+                        <th className="py-2.5">USER</th>
+                        <th className="py-2.5">ACTION TAKEN</th>
+                        <th className="py-2.5 text-right">TIMESTAMP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reportAccessLogs.map(log => (
+                        <tr key={log.logId} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                          <td className="py-2.5 text-slate-400 font-bold">{log.logId}</td>
+                          <td className="py-2.5 font-bold text-[#10163A]">{log.reportName}</td>
+                          <td className="py-2.5 font-sans font-bold text-slate-600">{log.user}</td>
+                          <td className="py-2.5 font-sans text-slate-500 font-semibold">{log.action}</td>
+                          <td className="py-2.5 text-right font-bold text-slate-400">{log.timestamp.slice(0, 16).replace('T', ' ')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: ADD WHAT-IF PROVISIONAL sandbox ENTRY */}
+            {showProvisionalModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <span className="material-icons-round text-emerald-600 text-sm">science</span> Add What-If Sandbox Adjustment
+                    </h3>
+                    <button onClick={() => setShowProvisionalModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  
+                  <form onSubmit={handleCreateProvisionalEntry} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Select Account</label>
+                      <select 
+                        value={provAccount} 
+                        onChange={e => setProvAccount(e.target.value)}
+                        className="w-full p-2 border rounded bg-white text-slate-800 font-bold"
+                      >
+                        {ledgers.map(l => (
+                          <option key={l.id} value={l.name}>{l.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Provisional Debit ($)</label>
+                        <input 
+                          type="number" 
+                          value={provDr} 
+                          onChange={e => setProvDr(Number(e.target.value))}
+                          className="w-full p-2 border rounded font-mono font-bold text-slate-800" 
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Provisional Credit ($)</label>
+                        <input 
+                          type="number" 
+                          value={provCr} 
+                          onChange={e => setProvCr(Number(e.target.value))}
+                          className="w-full p-2 border rounded font-mono font-bold text-rose-600" 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Sandboxed adjustments Notes</label>
+                      <input 
+                        type="text" 
+                        value={provDesc}
+                        onChange={e => setProvDesc(e.target.value)}
+                        placeholder="e.g. outstanding salary reserves"
+                        className="w-full p-2 border rounded text-slate-800"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition">
+                        Inject Sandbox Line
+                      </button>
+                      <button type="button" onClick={() => setShowProvisionalModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL: CREATE SCHEDULE */}
+            {showScheduleModal && (
+              <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between border-b pb-3">
+                    <h3 className="font-extrabold text-base font-manrope text-slate-900 flex items-center gap-1.5">
+                      <FiCalendar className="text-[#12A594]" /> Configure Email Subscription
+                    </h3>
+                    <button onClick={() => setShowScheduleModal(false)} className="text-slate-400 hover:text-slate-700">
+                      <FiX />
+                    </button>
+                  </div>
+                  
+                  <form onSubmit={handleCreateReportSchedule} className="space-y-3 text-xs font-semibold text-slate-700">
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Report Target</label>
+                      <select 
+                        value={schedReportName} 
+                        onChange={e => setSchedReportName(e.target.value)}
+                        className="w-full p-2 border rounded bg-white text-slate-800"
+                      >
+                        <option value="Balance Sheet">Balance Sheet</option>
+                        <option value="Profit & Loss">Profit & Loss Statement</option>
+                        <option value="Trial Balance">Trial Balance</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Cadence Frequency</label>
+                      <select 
+                        value={schedFreq} 
+                        onChange={e => setSchedFreq(e.target.value)}
+                        className="w-full p-2 border rounded bg-white text-slate-800"
+                      >
+                        <option value="Weekly">Weekly (Every Monday)</option>
+                        <option value="Monthly">Monthly (Last calendar day)</option>
+                        <option value="Quarterly">Quarterly</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold uppercase text-[10px] text-slate-500 block mb-1">Recipients Email</label>
+                      <input 
+                        type="email" 
+                        value={schedRecipients}
+                        onChange={e => setSchedRecipients(e.target.value)}
+                        placeholder="e.g. auditor@superenterprise.com"
+                        className="w-full p-2 border rounded text-slate-800 font-bold" 
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-2.5 pt-3 border-t">
+                      <button type="submit" className="flex-1 bg-[#12A594] hover:bg-[#0B7A6E] text-white py-2 rounded font-extrabold transition">
+                        Subscribe Cadence
+                      </button>
+                      <button type="button" onClick={() => setShowScheduleModal(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded font-bold transition">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </main>
         );
+      }
 
       case 'crm':
         return (
@@ -5581,74 +6756,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ACTIVE REPORT POPUP MODAL */}
-      {activeReport && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-extrabold text-base font-manrope text-slate-900">{activeReport}</h3>
-              <button onClick={() => setActiveReport(null)} className="text-slate-400 hover:text-slate-700 text-lg">&times;</button>
-            </div>
-            <div className="max-h-96 overflow-y-auto p-2">
-              {activeReport === 'Balance Sheet' ? (
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 font-bold border-b">
-                      <th className="p-2">Particulars</th>
-                      <th className="p-2 text-right">Debit ($)</th>
-                      <th className="p-2 text-right">Credit ($)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y text-slate-700">
-                    <tr className="font-bold"><td className="p-2">Assets</td><td></td><td></td></tr>
-                    <tr><td className="p-2 pl-4">Silicon Valley Bank</td><td className="p-2 text-right">$45,000.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr><td className="p-2 pl-4">Acme Corp (Debtor)</td><td className="p-2 text-right">$12,500.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr><td className="p-2 pl-4">Stock-in-hand</td><td className="p-2 text-right">$52,290.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr className="font-bold"><td className="p-2">Liabilities & Equity</td><td></td><td></td></tr>
-                    <tr><td className="p-2 pl-4">Globex Logistics (Creditor)</td><td className="p-2 text-right">-</td><td className="p-2 text-right">$8,400.00</td></tr>
-                    <tr><td className="p-2 pl-4">Equity Capital A/c</td><td className="p-2 text-right">-</td><td className="p-2 text-right">$101,390.00</td></tr>
-                    <tr className="font-extrabold bg-teal-50"><td className="p-2">Total</td><td className="p-2 text-right text-teal-600">$109,790.00</td><td className="p-2 text-right text-teal-600">$109,790.00</td></tr>
-                  </tbody>
-                </table>
-              ) : activeReport === 'Profit & Loss Statement' ? (
-                <table className="w-full text-xs text-left border-collapse">
-                  <tbody className="divide-y text-slate-700">
-                    <tr className="font-bold bg-slate-100"><td className="p-2">Operating Revenues</td><td className="p-2 text-right">$24,850.00</td></tr>
-                    <tr><td className="p-2 pl-4">Sales Invoices</td><td className="p-2 text-right">$24,850.00</td></tr>
-                    <tr className="font-bold bg-slate-100"><td className="p-2">Direct Cost of Sales</td><td className="p-2 text-right">$11,210.00</td></tr>
-                    <tr><td className="p-2 pl-4">Cost of Materials</td><td className="p-2 text-right">$8,210.00</td></tr>
-                    <tr><td className="p-2 pl-4">Logistics & Shipping</td><td className="p-2 text-right">$3,000.00</td></tr>
-                    <tr className="font-extrabold bg-teal-50"><td className="p-2">Net Trading Profit</td><td className="p-2 text-right text-green-600">$13,640.00</td></tr>
-                  </tbody>
-                </table>
-              ) : (
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-100 font-bold border-b">
-                      <th className="p-2">Ledger Account</th>
-                      <th className="p-2 text-right">Debit ($)</th>
-                      <th className="p-2 text-right">Credit ($)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y text-slate-700">
-                    <tr><td className="p-2">Silicon Valley Bank</td><td className="p-2 text-right">$45,000.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr><td className="p-2">Acme Corp</td><td className="p-2 text-right">$12,500.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr><td className="p-2">Globex Logistics</td><td className="p-2 text-right">-</td><td className="p-2 text-right">$8,400.00</td></tr>
-                    <tr><td className="p-2">Sales Account</td><td className="p-2 text-right">-</td><td className="p-2 text-right">$24,850.00</td></tr>
-                    <tr><td className="p-2">Logistics Expense A/c</td><td className="p-2 text-right">$8,400.00</td><td className="p-2 text-right">-</td></tr>
-                    <tr><td className="p-2">Equity Capital A/c</td><td className="p-2 text-right">-</td><td className="p-2 text-right">$45,000.00</td></tr>
-                    <tr className="font-extrabold bg-teal-50"><td className="p-2">Total Parity</td><td className="p-2 text-right text-teal-600">$65,900.00</td><td className="p-2 text-right text-teal-600">$65,900.00</td></tr>
-                  </tbody>
-                </table>
-              )}
-            </div>
-            <div className="flex justify-end gap-2 border-t pt-3">
-              <button onClick={() => window.print()} className="border px-4 py-1.5 rounded bg-slate-50 hover:bg-slate-100 text-xs font-bold">Print</button>
-              <button onClick={() => setActiveReport(null)} className="bg-[#12A594] text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-[#0B7A6E]">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* QUICK INVOICE MODAL */}
       {showQuickInvoiceModal && (
