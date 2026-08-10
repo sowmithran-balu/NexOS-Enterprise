@@ -8,6 +8,7 @@ import {
   FiShare
 } from 'react-icons/fi';
 import SettingsConsole from './pages/SettingsConsole';
+import CrmPortal from './pages/CrmPortal';
 
 // Chart.js global reference
 declare const Chart: any;
@@ -6120,89 +6121,13 @@ export default function App() {
 
       case 'crm':
         return (
-          <main className="flex-1 overflow-y-auto p-6 space-y-6">
-            <div className="bg-white border-[1.5px] border-[#161B33] rounded-lg p-6 shadow-sm space-y-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold font-manrope text-[#161B33]">CRM Portal</h2>
-                  <p className="text-xs text-[#5B6178] mt-1">Track pipeline deal stages, active negotiations, and closed opportunities</p>
-                </div>
-                <button 
-                  onClick={() => {
-                    const name = window.prompt('Enter Lead Name:', 'ByteDance Inc');
-                    if (name) {
-                      const newLead = {
-                        id: `LD-${Date.now().toString().slice(-3)}`,
-                        name,
-                        ref: 'BD-801',
-                        amt: 45000.00,
-                        status: 'Qualification',
-                        label: 'Hot'
-                      };
-                      setLeads([...leads, newLead]);
-                      showToast(`New lead '${name}' added to Qualification stage.`, 'success');
-                    }
-                  }}
-                  className="bg-[#12A594] hover:bg-[#0B7A6E] text-white px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition"
-                >
-                  + Add New Lead
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {['Qualification', 'Proposal Sent', 'Negotiation', 'Closed Won'].map(stage => {
-                  const stageLeads = leads.filter(l => l.status === stage);
-                  return (
-                    <div key={stage} className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
-                      <h4 className="font-extrabold text-xs uppercase tracking-wider text-slate-600 mb-2">
-                        {stage} ({stageLeads.length})
-                      </h4>
-                      {stageLeads.length === 0 ? (
-                        <div className="text-center py-6 text-slate-400 text-xs italic">No deals in this stage</div>
-                      ) : (
-                        stageLeads.map(l => (
-                          <div key={l.id} className="bg-white border border-slate-200 rounded-md p-3 shadow-sm space-y-2">
-                            <div className="font-bold text-slate-900 text-sm">{l.name}</div>
-                            <div className="text-[10px] text-slate-500 font-mono">Ref: {l.ref}</div>
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-xs text-[#10163A]">${l.amt.toLocaleString()}</span>
-                              <span className="bg-teal-50 text-teal-700 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">{l.label}</span>
-                            </div>
-                            <div className="flex items-center justify-end gap-1.5 border-t pt-2 mt-2">
-                              {stage !== 'Qualification' && (
-                                <button 
-                                  onClick={() => {
-                                    const stages = ['Qualification', 'Proposal Sent', 'Negotiation', 'Closed Won'];
-                                    const idx = stages.indexOf(stage);
-                                    setLeads(leads.map(lead => lead.id === l.id ? { ...lead, status: stages[idx - 1] } : lead));
-                                  }}
-                                  className="text-slate-400 hover:text-slate-600 text-xs p-1"
-                                >
-                                  &larr;
-                                </button>
-                              )}
-                              {stage !== 'Closed Won' && (
-                                <button 
-                                  onClick={() => {
-                                    const stages = ['Qualification', 'Proposal Sent', 'Negotiation', 'Closed Won'];
-                                    const idx = stages.indexOf(stage);
-                                    setLeads(leads.map(lead => lead.id === l.id ? { ...lead, status: stages[idx + 1] } : lead));
-                                  }}
-                                  className="text-slate-400 hover:text-slate-600 text-xs p-1"
-                                >
-                                  &rarr;
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </main>
+          <CrmPortal 
+            showToast={showToast} 
+            openTab={openTab} 
+            products={products} 
+            vouchers={vouchers} 
+            setVouchers={setVouchers} 
+          />
         );
 
       case 'projects':
