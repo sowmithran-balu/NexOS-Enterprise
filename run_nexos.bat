@@ -14,13 +14,20 @@ start "NexOS Backend" cmd /k ".\maven\bin\mvn.cmd -pl auth-service spring-boot:r
 echo Starting Vite frontend...
 start "NexOS Frontend" cmd /k "cd frontend && npm run dev"
 
-echo Waiting for services to initialize...
-timeout /t 6 >nul
+rem Waiting for services to initialize...
+ping 127.0.0.1 -n 7 >nul
 
 echo Opening browser to dashboard...
 start http://localhost:5174/
 
 echo.
 echo ===================================================
-echo   All services launched!
+echo   NexOS Enterprise ERP - All Services Active!
+echo   -------------------------------------------------
+echo   * Frontend Dashboard:   http://localhost:5174/
+echo   * Backend REST API:     http://localhost:8080/
+echo   * H2 Database Console:  http://localhost:8080/h2-console
+echo     - JDBC URL:  jdbc:h2:mem:NexOS_Enterprise
+echo     - User:      sa
+echo     - Password:  [leave empty]
 echo ===================================================

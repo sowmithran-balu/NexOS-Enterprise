@@ -3,6 +3,7 @@ package com.erp.auth.controller;
 import com.erp.auth.entity.User;
 import com.erp.auth.service.UserService;
 import com.erp.common.security.JwtUtils;
+import com.erp.auth.security.firewall.BruteForceProtectionService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,15 +22,35 @@ public class AuthController {
     private final UserService userService;
     private final JwtUtils jwtUtils;
     private final PasswordEncoder passwordEncoder;
+    private final BruteForceProtectionService bruteForceProtectionService;
 
-    public AuthController(UserService userService, JwtUtils jwtUtils, PasswordEncoder passwordEncoder) {
+    public AuthController(UserService userService, JwtUtils jwtUtils, PasswordEncoder passwordEncoder,
+                          BruteForceProtectionService bruteForceProtectionService) {
         this.userService = userService;
         this.jwtUtils = jwtUtils;
         this.passwordEncoder = passwordEncoder;
+        this.bruteForceProtectionService = bruteForceProtectionService;
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String simIp = request.getHeader("X-Simulate-Attacker-IP");
+        if (simIp != null && !simIp.isBlank()) {
+            return simIp.trim();
+        }
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isBlank()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        String xRealIp = request.getHeader("X-Real-IP");
+        if (xRealIp != null && !xRealIp.isBlank()) {
+            return xRealIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletRequest req) {
+        String clientIp = extractClientIp(req);
         try {
             User user = userService.registerUser(
                     request.username(),
@@ -41,7 +62,7 @@ public class AuthController {
             );
             return ResponseEntity.ok(user);
         } catch (Exception e) {
-            userService.logEvent(null, null, request.username(), req.getRemoteAddr(),
+            userService.logEvent(null, null, request.username(), clientIp,
                     "USER_REGISTER", "AUTH", e.getMessage(), "FAILURE");
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -49,12 +70,36 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest req) {
+        String clientIp = extractClientIp(req);
+
+        // Check adaptive brute-force defense
+        BruteForceProtectionService.LockoutStatus lockout =
+                bruteForceProtectionService.checkLockout(clientIp, request.username());
+
+        if (lockout.isLocked()) {
+            userService.logEvent(null, null, request.username(), clientIp,
+                    "LOGIN_BLOCKED_LOCKOUT", "AUTH", lockout.getMessage(), "BLOCKED");
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", String.valueOf(lockout.getRemainingSeconds()))
+                    .body(Map.of(
+                            "error", "ACCOUNT_LOCKED",
+                            "message", lockout.getMessage(),
+                            "retryAfterSeconds", lockout.getRemainingSeconds()
+                    ));
+        }
+
         try {
             User user = userService.findByUsername(request.username())
-                    .orElseThrow(() -> new RuntimeException("Invalid username or password"));
+                    .orElseThrow(() -> {
+                        bruteForceProtectionService.recordLoginFailure(clientIp, request.username());
+                        userService.logEvent(null, null, request.username(), clientIp,
+                                "LOGIN", "AUTH", "Unknown username attempt", "FAILURE");
+                        return new RuntimeException("Invalid username or password");
+                    });
 
             if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-                userService.logEvent(user.getCurrentCompanyId(), user.getId(), user.getUsername(), req.getRemoteAddr(),
+                bruteForceProtectionService.recordLoginFailure(clientIp, user.getUsername());
+                userService.logEvent(user.getCurrentCompanyId(), user.getId(), user.getUsername(), clientIp,
                         "LOGIN", "AUTH", "Invalid password attempt", "FAILURE");
                 throw new RuntimeException("Invalid username or password");
             }
@@ -62,6 +107,9 @@ public class AuthController {
             if (!user.isActive()) {
                 throw new RuntimeException("Account is deactivated");
             }
+
+            // Successful authentication - reset failure tracker
+            bruteForceProtectionService.recordLoginSuccess(clientIp, user.getUsername());
 
             if (user.isMfaEnabled()) {
                 // Generate a temporary token indicating MFA is required

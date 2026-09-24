@@ -13,14 +13,21 @@ spring:
     console:
       enabled: true
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    open-in-view: false
     hibernate:
       ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        use_sql_comments: true
+    show-sql: false
+
+erp:
+  security:
+    rate-limit:
+      auth-limit: 5
+      api-limit: 100
+    brute-force:
+      max-attempts: 5
+      lockout-minutes: 15
+    firewall:
+      whitelist-ips: 127.0.0.1,::1,0:0:0:0:0:0:0:1
 
 ---
 spring:

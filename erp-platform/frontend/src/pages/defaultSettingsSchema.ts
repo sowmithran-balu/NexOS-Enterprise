@@ -1,4 +1,4 @@
-﻿export const defaultSettingsSchema: Record<string, any> = {
+export const defaultSettingsSchema: Record<string, any> = {
       // 1. GENERAL
       'company_profile': {
         title: 'Company Profile',
@@ -225,6 +225,12 @@
           { name: 'expiryDays', label: 'Password expiration interval (days)', type: 'number', value: '90' },
           { name: 'strictRegex', label: 'Require special symbols, numbers, and case parity', type: 'toggle', value: true }
         ]
+      },
+      'firewall_defense': {
+        title: 'Network & Perimeter Security (Defense-in-Depth)',
+        category: 'User Management & Security',
+        description: 'Multi-layer concentric defense orchestrator: Edge WAF, Token Bucket Limiter, Brute-Force Lockouts, Microsegmentation, and SIEM.',
+        customRender: 'renderFirewallDefense'
       },
       'ip_whitelisting': {
         title: 'IP Whitelisting & Restrictions',

@@ -1,0 +1,121 @@
+# ==============================================================================
+# NexOS Enterprise ERP - Layer 4: Microsegmentation & Zero-Trust Architecture
+# 3-Tier Network Isolation: DMZ Ingress -> App Cluster -> Isolated Database Subnet
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # Layer 2: Ingress API Gateway & Reverse Proxy (Nginx)
+  # Acts as the single perimeter ingress gate terminating TLS and filtering DDoS
+  # ----------------------------------------------------------------------------
+  reverse-proxy:
+    image: nginx:1.25-alpine
+    container_name: nexos_edge_gateway
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./reverse-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./reverse-proxy/certs:/etc/nginx/certs:ro
+      - ./reverse-proxy/logs:/var/log/nginx
+    networks:
+      - dmz_net
+      - app_net
+    depends_on:
+      - backend
+      - frontend
+
+  # ----------------------------------------------------------------------------
+  # Frontend Application (Vite / React)
+  # Resides in DMZ; connects only to Nginx. CANNOT reach Database Subnet.
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./erp-platform/frontend
+      dockerfile: Dockerfile
+    container_name: nexos_frontend_ui
+    restart: unless-stopped
+    expose:
+      - "5174"
+    networks:
+      - dmz_net
+
+  # ----------------------------------------------------------------------------
+  # Layer 3: Spring Boot Monolith & Auth Service
+  # Sits in isolated app_net and db_net. Has NO direct public exposure.
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./erp-platform
+      dockerfile: Dockerfile
+    container_name: nexos_backend_core
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=sqlserver
+      - SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=NexOS_Enterprise;encrypt=true;trustServerCertificate=true;
+      - SPRING_DATASOURCE_USERNAME=nexos_app_user
+      - SPRING_DATASOURCE_PASSWORD=StrongEnterprisePassword!2026
+      - ERP_SECURITY_RATE_LIMIT_AUTH_LIMIT=5
+      - ERP_SECURITY_RATE_LIMIT_API_LIMIT=100
+      - ERP_SECURITY_BRUTE_FORCE_MAX_ATTEMPTS=5
+      - ERP_SECURITY_BRUTE_FORCE_LOCKOUT_MINUTES=15
+    expose:
+      - "8080"
+    networks:
+      - app_net
+      - db_net
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # Layer 5: Enterprise Database (Microsoft SQL Server)
+  # Strictly isolated inside private db_net (internal: true).
+  # Zero ingress from frontend or external internet. Port 1433 is never exposed.
+  # ----------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: nexos_db_sqlserver
+    restart: unless-stopped
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=SuperStrongSAPassword!2026
+      - MSSQL_PID=Developer
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - db_net
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'SuperStrongSAPassword!2026' -C -Q 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# ------------------------------------------------------------------------------
+# Zero-Trust Network Microsegmentation
+# ------------------------------------------------------------------------------
+networks:
+  # DMZ Network: External traffic enters here only
+  dmz_net:
+    driver: bridge
+    name: nexos_dmz_net
+
+  # App Network: East-West bridge between Nginx Gateway and Spring Boot
+  app_net:
+    driver: bridge
+    internal: false
+    name: nexos_app_net
+
+  # Database Subnet: Completely Isolated, NO external internet routing allowed
+  db_net:
+    driver: bridge
+    internal: true
+    name: nexos_db_isolated_subnet
+
+volumes:
+  sqlserver_data:
+    name: nexos_sqlserver_data

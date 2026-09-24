@@ -1,0 +1,59 @@
+{
+  "firewall_rules": [
+    {
+      "id": "nexos_waf_rule_001_geofencing",
+      "description": "NexOS Layer 1 Edge WAF: Geo-Fence unauthorized regions",
+      "expression": "(not ip.geoip.country in {\"US\" \"CA\" \"GB\" \"DE\" \"IN\" \"SG\" \"AU\"})",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "nexos_waf_rule_002_owasp_sqli",
+      "description": "NexOS Layer 1 Edge WAF: Block SQL Injection Signatures",
+      "expression": "(http.request.uri.query contains \"select\" and http.request.uri.query contains \"from\") or (http.request.uri.query contains \"union\" and http.request.uri.query contains \"select\") or (http.request.uri.query matches \"'.*(or|and).*=.*\") or (http.request.uri.query contains \"drop%20table\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "nexos_waf_rule_003_owasp_xss",
+      "description": "NexOS Layer 1 Edge WAF: Neutralize Cross-Site Scripting (XSS)",
+      "expression": "(http.request.uri.query contains \"<script\") or (http.request.uri.query contains \"javascript:\") or (http.request.uri.query contains \"onerror=\") or (http.request.uri.query contains \"onload=\")",
+      "action": "block",
+      "enabled": true
+    },
+    {
+      "id": "nexos_waf_rule_004_auth_rate_limit",
+      "description": "NexOS Layer 1 Edge WAF: Throttle Brute-Force on /api/auth/login",
+      "expression": "(http.request.uri.path eq \"/api/auth/login\" and http.request.method eq \"POST\")",
+      "action": "rate_limit",
+      "rate_limit": {
+        "threshold": 5,
+        "period": 60,
+        "action": "challenge"
+      },
+      "enabled": true
+    },
+    {
+      "id": "nexos_waf_rule_005_bot_threat_score",
+      "description": "NexOS Layer 1 Edge WAF: Managed Challenge for automated bot scrapers",
+      "expression": "(cf.bot_management.score lt 30 and not cf.bot_management.verified_bot)",
+      "action": "managed_challenge",
+      "enabled": true
+    },
+    {
+      "id": "nexos_waf_rule_006_block_debug_routes",
+      "description": "NexOS Layer 1 Edge WAF: Drop attempts to access internal DB consoles",
+      "expression": "(http.request.uri.path contains \"h2-console\" or http.request.uri.path contains \"actuator/env\")",
+      "action": "block",
+      "enabled": true
+    }
+  ],
+  "managed_rulesets": [
+    {
+      "name": "Cloudflare Managed Ruleset (OWASP Core Ruleset)",
+      "paranoia_level": 2,
+      "anomaly_score_threshold": 40,
+      "status": "active"
+    }
+  ]
+}

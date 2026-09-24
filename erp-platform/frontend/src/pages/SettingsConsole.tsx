@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { defaultSettingsSchema } from './defaultSettingsSchema';
+import SecurityFirewallConsole from './SecurityFirewallConsole';
 
 interface SettingsConsoleProps {
   companyName: string;
@@ -16,7 +17,7 @@ const categoriesList = [
   { id: 'general', title: '1. GENERAL / ORGANIZATION', icon: 'corporate_fare', subKeys: ['company_profile', 'branches', 'fiscal_year', 'locale', 'currency', 'cost_centers'], badge: 'Active' },
   { id: 'modules', title: '2. MODULES & LICENSING', icon: 'toggle_on', subKeys: ['module_matrix', 'licensing', 'feature_flags', 'subscription'], badge: 'Active' },
   { id: 'version', title: '3. VERSION & SYSTEM UPDATES', icon: 'system_update', subKeys: ['build_info', 'version_tracker', 'update_scheduler', 'changelog', 'update_history', 'environment'], badge: 'Update' },
-  { id: 'users', title: '4. USER MANAGEMENT & SECURITY', icon: 'security', subKeys: ['user_accounts', 'rbac_matrix', 'permission_groups', 'two_factor', 'sso_config', 'session_policies', 'ip_whitelisting', 'login_activity'], badge: 'Active' },
+  { id: 'users', title: '4. USER MANAGEMENT & SECURITY', icon: 'security', subKeys: ['user_accounts', 'rbac_matrix', 'firewall_defense', 'permission_groups', 'two_factor', 'sso_config', 'session_policies', 'ip_whitelisting', 'login_activity'], badge: 'Active' },
   { id: 'finance', title: '5. FINANCE & ACCOUNTING CONFIG', icon: 'account_balance', subKeys: ['chart_of_accounts', 'tax_config', 'e_invoicing', 'numbering_series', 'payment_terms', 'bank_master', 'costing_method'], badge: 'Active' },
   { id: 'inventory', title: '6. INVENTORY & PROCUREMENT SETTINGS', icon: 'inventory_2', subKeys: ['warehouse_master', 'uom_config', 'reorder_rules', 'approval_workflows', 'vendor_master', 'serial_tracking'], badge: 'Active' },
   { id: 'manufacturing', title: '7. MANUFACTURING / MRP SETTINGS', icon: 'precision_manufacturing', subKeys: ['bom_config', 'work_center_master', 'production_rules', 'quality_checkpoints', 'shift_planning'], badge: 'Setup' },
@@ -438,7 +439,9 @@ export default function SettingsConsole({
           <div className="content-body">
             <div className="settings-card">
               {/* Dynamic schema switch */}
-              {activeSubKey === 'module_matrix' ? (
+              {activeSubKey === 'firewall_defense' || activeSubKey === 'ip_whitelisting' ? (
+                <SecurityFirewallConsole showToast={showToast} />
+              ) : activeSubKey === 'module_matrix' ? (
                 // 1. MODULE ACTIVATION MATRIX
                 <div>
                   <h3 className="font-manrope" style={{ fontSize: '16px', marginBottom: '12px', fontWeight: 700 }}>
