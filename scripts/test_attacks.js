@@ -44,10 +44,19 @@ async function runTests() {
   console.log('      -> Rate Limit Throttles    :', status.rateLimitDropsCount);
   console.log('      -> Active IP Bans Count    :', status.activeBansCount);
 
-  const bansRes = await fetch('http://localhost:8080/api/security/firewall/bans');
-  const bans = await bansRes.json();
-  console.log('\n=== Currently Active Blacklist Entries ===');
-  console.dir(bans, { depth: null });
+  // Test 5: Verify Juniper Cloud Networks SecIntel Sync
+  console.log('\n[5/5] Verifying Juniper Cloud Networks & SecIntel Sync...');
+  try {
+    const juniperRes = await fetch('http://localhost:8080/api/security/firewall/juniper/status');
+    const juniperStatus = await juniperRes.json();
+    console.log('      -> Juniper Cloud Connected :', juniperStatus.connected);
+    console.log('      -> Juniper SRX Cluster     :', juniperStatus.clusterId);
+    console.log('      -> SecIntel Threat Feed    :', juniperStatus.secintelFeed);
+    console.log('      -> Active Wire-Speed Drops :', juniperStatus.activeWireSpeedDropsCount);
+    console.log('      -> Last Sync Timestamp     :', juniperStatus.lastSyncTimestamp);
+  } catch (e) {
+    console.log('      -> Juniper status endpoint offline (start backend with: mvn -pl auth-service spring-boot:run)');
+  }
 }
 
 runTests().catch(console.error);
