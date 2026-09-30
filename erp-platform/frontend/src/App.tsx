@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import SettingsConsole from './pages/SettingsConsole';
 import CrmPortal from './pages/CrmPortal';
+import SecurityFirewallConsole from './pages/SecurityFirewallConsole';
 
 // Chart.js global reference
 declare const Chart: any;
@@ -6741,6 +6742,13 @@ I have analyzed your query regarding: **"${query}"**
           </main>
         );
 
+      case 'security':
+        return (
+          <main className="flex-1 overflow-y-auto p-4 bg-slate-900">
+            <SecurityFirewallConsole showToast={showToast} />
+          </main>
+        );
+
       default:
         return (
           <main className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -6850,6 +6858,7 @@ I have analyzed your query regarding: **"${query}"**
           <div className="px-4 h-full flex items-center hover:bg-[#232C63] hover:text-white transition cursor-pointer" onClick={() => openTab('projects', 'Projects Board', 'projects')}>Projects</div>
           <div className="px-4 h-full flex items-center hover:bg-[#232C63] hover:text-white transition cursor-pointer" onClick={() => openTab('profit_loss', 'Profit & Loss', 'profit_loss')}>Profit & Loss</div>
           <div className="px-4 h-full flex items-center hover:bg-[#232C63] hover:text-white transition cursor-pointer" onClick={() => openTab('help_support', 'Help & Support', 'help_support')}>Help & support</div>
+          <div className="px-4 h-full flex items-center hover:bg-[#1E3A8A] text-emerald-400 font-bold transition cursor-pointer border-b-2 border-emerald-400" onClick={() => openTab('security', '🛡️ Security Firewall', 'security')}>🛡️ Security Firewall</div>
         </div>
 
         <button 
