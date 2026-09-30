@@ -29,6 +29,28 @@ services:
       - frontend
 
   # ----------------------------------------------------------------------------
+  # Layer 1 & 4: Juniper cSRX Containerized Next-Generation Firewall
+  # Enforces East-West Microsegmentation, OWASP IDP, and SecIntel Threat Sync
+  # ----------------------------------------------------------------------------
+  juniper-csrx:
+    image: cr.juniper.net/security/csrx:latest
+    container_name: nexos_juniper_csrx
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - CSRX_CONFIG=/etc/junos/juniper-srx-firewall.conf
+      - JUNIPER_CLOUD_CLUSTER_ID=JUNIPER-SRX-NEXOS-CLOUD-01
+      - JUNIPER_SECINTEL_FEED=NexOS-ERP-Threats
+    volumes:
+      - ./edge/juniper-srx-firewall.conf:/etc/junos/juniper-srx-firewall.conf:ro
+    networks:
+      - dmz_net
+      - app_net
+      - db_net
+
+
+  # ----------------------------------------------------------------------------
   # Frontend Application (Vite / React)
   # Resides in DMZ; connects only to Nginx. CANNOT reach Database Subnet.
   # ----------------------------------------------------------------------------

@@ -29,6 +29,15 @@ erp:
     firewall:
       whitelist-ips: 127.0.0.1,::1,0:0:0:0:0:0:0:1
 
+juniper:
+  cloud:
+    enabled: true
+    gateway-host: "juniper-srx.cloud.nexos.internal"
+    port: 8443
+    cluster-id: "JUNIPER-SRX-NEXOS-CLOUD-01"
+    secintel-feed: "NexOS-ERP-Threats"
+    sync-interval-seconds: 30
+
 ---
 spring:
   config:

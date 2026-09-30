@@ -14,9 +14,30 @@ import java.util.UUID;
 public class SecurityFirewallController {
 
     private final IpDefenseManager ipDefenseManager;
+    private final com.erp.auth.security.juniper.JuniperCloudConnectorService juniperCloudConnectorService;
 
-    public SecurityFirewallController(IpDefenseManager ipDefenseManager) {
+    public SecurityFirewallController(IpDefenseManager ipDefenseManager,
+                                      com.erp.auth.security.juniper.JuniperCloudConnectorService juniperCloudConnectorService) {
         this.ipDefenseManager = ipDefenseManager;
+        this.juniperCloudConnectorService = juniperCloudConnectorService;
+    }
+
+    @GetMapping("/juniper/status")
+    public ResponseEntity<Map<String, Object>> getJuniperStatus() {
+        return ResponseEntity.ok(juniperCloudConnectorService.getJuniperCloudStatus());
+    }
+
+    @PostMapping("/juniper/sync")
+    public ResponseEntity<?> syncWithJuniper() {
+        List<IpDefenseManager.BannedIpRecord> bans = ipDefenseManager.getActiveBans();
+        for (var b : bans) {
+            juniperCloudConnectorService.pushBlockedIpToJuniper(b.ip(), b.reason(), b.getRemainingSeconds());
+        }
+        return ResponseEntity.ok(Map.of(
+                "message", "Successfully synchronized all active defense bans with Juniper Cloud Networks SRX cluster",
+                "syncedCount", bans.size(),
+                "juniperStatus", juniperCloudConnectorService.getJuniperCloudStatus()
+        ));
     }
 
     @GetMapping("/status")

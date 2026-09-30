@@ -18,6 +18,12 @@ import java.util.concurrent.atomic.AtomicLong;
 @Service
 public class IpDefenseManager {
 
+    private final com.erp.auth.security.juniper.JuniperCloudConnectorService juniperCloudConnectorService;
+
+    public IpDefenseManager(com.erp.auth.security.juniper.JuniperCloudConnectorService juniperCloudConnectorService) {
+        this.juniperCloudConnectorService = juniperCloudConnectorService;
+    }
+
     private final Set<String> whitelistedIps = new CopyOnWriteArraySet<>(Arrays.asList(
             "127.0.0.1",
             "0:0:0:0:0:0:0:1",
@@ -140,10 +146,17 @@ public class IpDefenseManager {
             int count = (existing != null) ? existing.violationCount() + 1 : 1;
             return new BannedIpRecord(ip, reason, now, expiresAt, count);
         });
+
+        // Enforce Layer 1 & 4 wire-speed packet drop on Juniper Cloud SRX firewall
+        juniperCloudConnectorService.pushBlockedIpToJuniper(ip, reason, durationSeconds);
     }
 
     public boolean unbanIp(String ip) {
-        return bannedIps.remove(ip) != null;
+        boolean removed = bannedIps.remove(ip) != null;
+        if (removed) {
+            juniperCloudConnectorService.removeBlockedIpFromJuniper(ip);
+        }
+        return removed;
     }
 
     public void addWhitelistIp(String ip) {

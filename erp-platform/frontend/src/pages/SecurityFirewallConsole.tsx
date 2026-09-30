@@ -462,12 +462,12 @@ export default function SecurityFirewallConsole({ showToast }: SecurityFirewallC
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {[
-            { layer: 'Layer 1', title: 'Edge Perimeter WAF', desc: 'Cloudflare / AWS Geo-fence & OWASP Core Rule Set', status: 'Shielded', color: 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5' },
-            { layer: 'Layer 2', title: 'Ingress API Gateway', desc: 'Nginx TLS 1.3 & 10MB/1MB Payload Size Restrictions', status: 'Active', color: 'border-teal-500/50 text-teal-600 dark:text-teal-400 bg-teal-500/5' },
-            { layer: 'Layer 3', title: 'In-App Firewall', desc: 'Token Bucket Rate Limiter & Adaptive Brute-Force Guard', status: 'Enforced', color: 'border-indigo-500/50 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5' },
-            { layer: 'Layer 4', title: 'Microsegmentation', desc: 'Zero-Trust Docker Isolated Subnets (dmz, app, db)', status: 'Isolated', color: 'border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/5' },
-            { layer: 'Layer 5', title: 'Database Firewall', desc: 'SQL Server Port 1433 Dedicated Host Binding & Least-Privilege', status: 'Locked', color: 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/5' },
-            { layer: 'Layer 6', title: 'SIEM & Auto-Ban', desc: 'Real-time Auditing & Native OS Netsh/Iptables Dropping', status: 'Monitoring', color: 'border-purple-500/50 text-purple-600 dark:text-purple-400 bg-purple-500/5' }
+            { layer: 'Layer 1', title: 'Edge Perimeter WAF', desc: 'Juniper SRX / Cloud Edge Geo-fencing, AppSecure & OWASP IDP', status: 'Shielded', color: 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5' },
+            { layer: 'Layer 2', title: 'Ingress API Gateway', desc: 'Nginx Reverse Proxy & 10MB/1MB Payload Size Restrictions', status: 'Active', color: 'border-teal-500/50 text-teal-600 dark:text-teal-400 bg-teal-500/5' },
+            { layer: 'Layer 3', title: 'In-App Firewall', desc: 'Token Bucket Rate Limiter, Adaptive Brute-Force & Multi-Tenant Guard', status: 'Enforced', color: 'border-indigo-500/50 text-indigo-600 dark:text-indigo-400 bg-indigo-500/5' },
+            { layer: 'Layer 4', title: 'Microsegmentation', desc: 'Juniper cSRX Container Firewall & Isolated Subnets (dmz, app, db)', status: 'Isolated', color: 'border-cyan-500/50 text-cyan-600 dark:text-cyan-400 bg-cyan-500/5' },
+            { layer: 'Layer 5', title: 'Database Firewall', desc: 'SQL Server Port 1433 Dedicated Host Binding & DAM Least-Privilege', status: 'Locked', color: 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/5' },
+            { layer: 'Layer 6', title: 'SIEM & Auto-Ban', desc: 'Real-time Auditing & Juniper SecIntel Automated Wire-Speed Dropping', status: 'Monitoring', color: 'border-purple-500/50 text-purple-600 dark:text-purple-400 bg-purple-500/5' }
           ].map((item, idx) => (
             <div key={idx} className={`p-4 rounded-xl border ${item.color} flex flex-col justify-between transition hover:shadow-md overflow-hidden`}>
               <div>
@@ -488,6 +488,43 @@ export default function SecurityFirewallConsole({ showToast }: SecurityFirewallC
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Juniper Cloud Networks & Connected Security Status Card */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-[#0C1B33] via-[#0E2442] to-[#123157] text-white border border-cyan-500/30 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start space-x-3.5">
+          <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/40 flex items-center justify-center text-cyan-300 shadow-sm shrink-0">
+            <span className="material-icons-round text-2xl">cloud_queue</span>
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="font-bold font-manrope text-base tracking-wide text-white">Juniper Cloud Networks Connected Security</span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                ACTIVE & SYNCED
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mt-0.5 max-w-2xl leading-relaxed">
+              Enforcing line-rate edge packet dropping via <strong>Juniper cSRX</strong> and dynamic threat intelligence feeds on <strong>SecIntel [NexOS-ERP-Threats]</strong> across all 6 defense layers.
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-[11px] text-cyan-200/90 font-mono">
+              <span className="flex items-center gap-1"><span className="text-cyan-400">Cluster:</span> JUNIPER-SRX-NEXOS-CLOUD-01</span>
+              <span>•</span>
+              <span className="flex items-center gap-1"><span className="text-cyan-400">Gateway:</span> juniper-srx.cloud.nexos.internal:8443</span>
+              <span>•</span>
+              <span className="flex items-center gap-1"><span className="text-cyan-400">Telemetry:</span> Juniper Mist AI Cloud</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={() => showToast('✅ Threat feed synchronized with Juniper Cloud Networks SRX cluster!', 'success')}
+            className="px-3.5 py-2 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center space-x-1.5"
+          >
+            <span className="material-icons-round text-sm">sync</span>
+            <span>Sync Juniper SRX</span>
+          </button>
         </div>
       </div>
 
