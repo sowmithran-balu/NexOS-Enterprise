@@ -58,7 +58,7 @@ public class User {
     private String openrouterApiKey;
 
     @Column(name = "active_ai_provider")
-    private String activeAiProvider = "local";
+    private String activeAiProvider = "langchain";
 
     @Column(name = "openrouter_model")
     private String openrouterModel = "google/gemini-2.5-flash";

@@ -46,3 +46,8 @@ Thumbs.db
 **/scratch/
 scratch/
 
+# Python / AI Agent
+**/.venv/
+**/__pycache__/
+*.py[cod]
+

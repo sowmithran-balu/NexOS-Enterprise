@@ -34,7 +34,7 @@ export default function ChatAssistant({ token, activeTab, voiceTriggerCount = 0,
   const [showSettings, setShowSettings] = useState(false);
 
   // Secure Server Settings States
-  const [activeAiProvider, setActiveAiProvider] = useState('local');
+  const [activeAiProvider, setActiveAiProvider] = useState('langchain');
   const [geminiApiKey, setGeminiApiKey] = useState('');
   const [openrouterApiKey, setOpenrouterApiKey] = useState('');
   const [openrouterModel, setOpenrouterModel] = useState('google/gemini-2.5-flash');
@@ -795,11 +795,25 @@ export default function ChatAssistant({ token, activeTab, voiceTriggerCount = 0,
                     onChange={(e) => setActiveAiProvider(e.target.value)}
                     style={{ width: '100%', padding: '8px 10px', fontSize: '0.85rem', background: 'var(--bg-input)', border: '1px solid var(--border-primary)', borderRadius: '6px', color: 'white', outline: 'none' }}
                   >
-                    <option value="local">🤖 Local DB Intelligence Agent (No Key)</option>
+                    <option value="langchain">🦜🔗 LangChain Agentic AI (16 Autonomous Enterprise Tools)</option>
+                    <option value="local">🤖 Local Database Direct Engine (No Key)</option>
                     <option value="gemini">✨ Google Gemini Direct (Database Saved)</option>
                     <option value="openrouter">🚀 OpenRouter Hub (Database Saved)</option>
                   </select>
                 </div>
+
+                {/* Conditional LangChain settings note */}
+                {activeAiProvider === 'langchain' && (
+                  <div style={{ marginBottom: '14px', padding: '10px 12px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '0.9rem' }}>🦜🔗</span>
+                      <strong style={{ fontSize: '0.8rem', color: '#60A5FA' }}>Agentic AI Microservice Active</strong>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                      Connected to <code>http://localhost:8000/chat</code>. Equipped with 16 autonomous tools for Accounting, Inventory, CRM, Billing, Staff, and Executive Analytics. Launch with <code>run_ai_agent.bat</code> or <code>run_nexos.bat</code>.
+                    </p>
+                  </div>
+                )}
 
                 {/* Conditional Gemini settings */}
                 {activeAiProvider === 'gemini' && (

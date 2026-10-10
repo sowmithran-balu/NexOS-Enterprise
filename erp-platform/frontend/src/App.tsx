@@ -6977,9 +6977,20 @@ I have analyzed your query regarding: **"${query}"**
                 <span className="font-bold text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
                   <FiSettings className="text-[#12A594]" /> AI Engine & API Key Lock
                 </span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${copilotKeyLocked ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
-                  {copilotKeyLocked ? '🔒 Key Locked' : '🔓 Unlocked'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${copilotKeyLocked ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+                    {copilotKeyLocked ? '🔒 Key Locked' : '🔓 Unlocked'}
+                  </span>
+                  <button 
+                    type="button"
+                    onClick={() => setCopilotShowSettings(false)}
+                    className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition"
+                    title="Close AI Engine Settings"
+                    aria-label="Close AI Engine Settings"
+                  >
+                    <FiX className="text-sm" />
+                  </button>
+                </div>
               </div>
 
               {/* Provider Selection */}
@@ -7110,6 +7121,15 @@ I have analyzed your query regarding: **"${query}"**
               <div className="text-[10px] text-slate-400 bg-black/20 p-2 rounded border border-white/5 leading-relaxed">
                 🔒 <strong>Zero-Leak Security</strong>: Your API key is encrypted directly in your browser's protected vault and protected from accidental modification when locked.
               </div>
+
+              {/* Close Drawer Button */}
+              <button 
+                type="button"
+                onClick={() => setCopilotShowSettings(false)}
+                className="w-full py-1.5 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 transition"
+              >
+                <FiChevronDown className="text-xs rotate-180" /> Close AI Settings
+              </button>
             </div>
           )}
 

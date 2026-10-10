@@ -6,6 +6,7 @@ import com.erp.org.entity.*;
 import com.erp.org.repository.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.erp.common.security.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class AiService {
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     @Autowired
     private ProductRepository productRepository;
@@ -49,7 +53,7 @@ public class AiService {
     private DepartmentRepository departmentRepository;
 
     public String generateResponse(String prompt, String activeTab, User user) {
-        String provider = user.getActiveAiProvider() != null ? user.getActiveAiProvider() : "local";
+        String provider = user.getActiveAiProvider() != null ? user.getActiveAiProvider() : "langchain";
         
         if ("gemini".equalsIgnoreCase(provider)) {
             String apiKey = user.getGeminiApiKey();
@@ -67,10 +71,56 @@ public class AiService {
             if (apiKey != null && !apiKey.trim().isEmpty()) {
                 return callOpenRouter(prompt, activeTab, apiKey, user.getOpenrouterModel());
             }
+        } else if ("langchain".equalsIgnoreCase(provider)) {
+            return callLangChainAgent(prompt, activeTab, user);
         }
         
         // Fall back to local db
         return getMockResponse(prompt, activeTab);
+    }
+
+    private String callLangChainAgent(String prompt, String activeTab, User user) {
+        try {
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(12))
+                    .build();
+
+            Long companyId = user.getCurrentCompanyId() != null ? user.getCurrentCompanyId() : 1L;
+            Long branchId = user.getCurrentBranchId() != null ? user.getCurrentBranchId() : 1L;
+            List<String> roleNames = (user.getRoles() != null && !user.getRoles().isEmpty())
+                    ? user.getRoles().stream().map(Role::getName).collect(Collectors.toList())
+                    : List.of("ROLE_ADMIN");
+
+            String serviceToken = jwtUtils.generateToken(user.getUsername(), companyId, branchId, roleNames);
+
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> requestMap = Map.of(
+                "message", prompt,
+                "companyId", companyId,
+                "token", serviceToken
+            );
+            String requestBody = mapper.writeValueAsString(requestMap);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:8000/chat"))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + serviceToken)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() == 200) {
+                JsonNode rootNode = mapper.readTree(response.body());
+                JsonNode respNode = rootNode.path("response");
+                if (!respNode.isMissingNode()) {
+                    return respNode.asText();
+                }
+            }
+            return "*(LangChain Agent returned status " + response.statusCode() + ", falling back to local database engine)*\n\n" + getMockResponse(prompt, activeTab);
+        } catch (Exception e) {
+            return "*(LangChain Agent at http://localhost:8000 is not reachable: " + e.getMessage() + ". Run `run_ai_agent.bat` or `run_nexos.bat` to launch it! Falling back to local database engine)*\n\n" + getMockResponse(prompt, activeTab);
+        }
     }
 
     private String callGemini(String prompt, String activeTab, String apiKey) {
